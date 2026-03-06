@@ -1,0 +1,429 @@
+require('dotenv').config();
+const { Pool } = require('pg');
+const { PrismaPg } = require('@prisma/adapter-pg');
+const { PrismaClient } = require('@prisma/client');
+const pool = new Pool({ connectionString: process.env.DATABASE_URL.replace('localhost', '127.0.0.1') });
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter });
+
+async function main() {
+    console.log("Seeding database...");
+
+    // 1. Permissions
+    const permissionsData = [
+        'manage_products',
+        'manage_categories',
+        'manage_brands',
+        'view_orders',
+        'manage_orders',
+        'manage_users',
+        'view_reports',
+        'buy_products',
+        'view_own_orders',
+    ];
+
+    const permissions = {};
+    for (const p of permissionsData) {
+        permissions[p] = await prisma.permission.upsert({
+            where: { name: p },
+            update: {},
+            create: { name: p },
+        });
+    }
+
+    // 2. Roles
+    const rolesData = [
+        {
+            name: 'SUPER_ADMIN',
+            permissions: permissionsData,
+        },
+        {
+            name: 'MANAGER',
+            permissions: ['manage_products', 'manage_categories', 'manage_brands', 'view_orders', 'manage_orders', 'view_reports'],
+        },
+        {
+            name: 'EDITOR',
+            permissions: ['manage_products', 'manage_categories', 'manage_brands'],
+        },
+        {
+            name: 'SALES',
+            permissions: ['view_orders', 'manage_orders'],
+        },
+        {
+            name: 'CUSTOMER',
+            permissions: ['buy_products', 'view_own_orders'],
+        },
+    ];
+
+    const roles = {};
+    for (const r of rolesData) {
+        roles[r.name] = await prisma.role.upsert({
+            where: { name: r.name },
+            update: {
+                permissions: {
+                    set: r.permissions.map(p => ({ id: permissions[p].id }))
+                }
+            },
+            create: {
+                name: r.name,
+                permissions: {
+                    connect: r.permissions.map(p => ({ id: permissions[p].id }))
+                }
+            },
+        });
+    }
+
+    // 3. Sample Users
+    const usersData = [
+        { email: 'admin@sumashtech.com', name: 'Admin User', role: 'SUPER_ADMIN', password: 'admin123' },
+        { email: 'manager@sumashtech.com', name: 'Manager User', role: 'MANAGER', password: 'manager123' },
+        { email: 'editor@sumashtech.com', name: 'Editor User', role: 'EDITOR', password: 'editor123' },
+        { email: 'sales@sumashtech.com', name: 'Sales User', role: 'SALES', password: 'sales123' },
+        { email: 'customer@example.com', name: 'Test Customer', role: 'CUSTOMER', password: 'user123' },
+    ];
+
+    for (const u of usersData) {
+        await prisma.user.upsert({
+            where: { email: u.email },
+            update: {
+                roleId: roles[u.role].id
+            },
+            create: {
+                email: u.email,
+                name: u.name,
+                password: u.password,
+                roleId: roles[u.role].id
+            }
+        });
+    }
+
+
+    // Categories
+    const categories = [
+        { name: 'iPhone', slug: 'smartphone-iphone' },
+        { name: 'Android Smartphone', slug: 'smartphone-android' },
+        { name: 'Laptop', slug: 'laptop' },
+        { name: 'MacBook', slug: 'mac' },
+        { name: 'Tablet', slug: 'tablet' },
+        { name: 'Smart Watch', slug: 'smart-watch' },
+        { name: 'Audio', slug: 'audio' },
+        { name: 'Gaming', slug: 'gaming' },
+        { name: 'Gadgets', slug: 'gadgets' },
+    ];
+
+    const createdCategories = {};
+    for (const cat of categories) {
+        createdCategories[cat.slug] = await prisma.category.upsert({
+            where: { slug: cat.slug },
+            update: {},
+            create: cat,
+        });
+    }
+
+    // Brands
+    const brands = [
+        { name: 'Apple', slug: 'apple' },
+        { name: 'Samsung', slug: 'samsung' },
+        { name: 'Xiaomi', slug: 'xiaomi' },
+        { name: 'Dell', slug: 'dell' },
+        { name: 'HP', slug: 'hp' },
+        { name: 'Asus', slug: 'asus' },
+        { name: 'Sony', slug: 'sony' },
+    ];
+
+    const createdBrands = {};
+    for (const brand of brands) {
+        createdBrands[brand.slug] = await prisma.brand.upsert({
+            where: { slug: brand.slug },
+            update: {},
+            create: brand,
+        });
+    }
+
+    // Products
+    const products = [
+        {
+            name: 'iPhone 15 Pro Max',
+            slug: 'iphone-15-pro-max',
+            description: 'iPhone 15 Pro Max. Forged in titanium and so powerful.',
+            price: 155000,
+            discount: 0,
+            stock: 15,
+            images: ['https://placehold.co/600x400/111/fff?text=iPhone+15+Pro+Max'],
+            isFeatured: true,
+            isNew: false,
+            rating: 5,
+            category: createdCategories['smartphone-iphone'],
+            brand: createdBrands['apple']
+        },
+        {
+            name: 'iPhone 15',
+            slug: 'iphone-15',
+            description: 'iPhone 15. New camera. New design. Newphoria.',
+            price: 115000,
+            discount: 5,
+            stock: 20,
+            images: ['https://placehold.co/600x400/111/fff?text=iPhone+15'],
+            isFeatured: false,
+            isNew: true,
+            rating: 4.5,
+            category: createdCategories['smartphone-iphone'],
+            brand: createdBrands['apple']
+        },
+        {
+            name: 'Samsung Galaxy S24 Ultra',
+            slug: 'samsung-galaxy-s24-ultra',
+            description: 'The ultimate Galaxy experience with AI features.',
+            price: 145000,
+            discount: 10,
+            stock: 10,
+            images: ['https://placehold.co/600x400/111/fff?text=Galaxy+S24+Ultra'],
+            isFeatured: true,
+            isNew: true,
+            rating: 4.8,
+            category: createdCategories['smartphone-android'],
+            brand: createdBrands['samsung']
+        },
+        {
+            name: 'MacBook Air M3',
+            slug: 'macbook-air-m3',
+            description: 'Impressively big. Impossibly thin.',
+            price: 135000,
+            discount: 0,
+            stock: 8,
+            images: ['https://placehold.co/600x400/111/fff?text=MacBook+Air+M3'],
+            isFeatured: true,
+            isNew: true,
+            rating: 5,
+            category: createdCategories['mac'],
+            brand: createdBrands['apple']
+        },
+        {
+            name: 'Dell XPS 15',
+            slug: 'dell-xps-15',
+            description: 'Premium performance in a thin and light design.',
+            price: 180000,
+            discount: 15,
+            stock: 5,
+            images: ['https://placehold.co/600x400/111/fff?text=Dell+XPS+15'],
+            isFeatured: false,
+            isNew: false,
+            rating: 4.5,
+            category: createdCategories['laptop'],
+            brand: createdBrands['dell']
+        },
+        {
+            name: 'Xiaomi Redmi Note 13 Pro',
+            slug: 'xiaomi-redmi-note-13-pro',
+            description: '200MP camera, Snapdragon processor.',
+            price: 35000,
+            discount: 0,
+            stock: 25,
+            images: ['https://placehold.co/600x400/111/fff?text=Redmi+Note+13+Pro'],
+            isFeatured: false,
+            isNew: true,
+            rating: 4.2,
+            category: createdCategories['smartphone-android'],
+            brand: createdBrands['xiaomi']
+        },
+        {
+            name: 'Sony WH-1000XM5',
+            slug: 'sony-wh-1000xm5',
+            description: 'Industry-leading noise cancellation.',
+            price: 32000,
+            discount: 20,
+            stock: 12,
+            images: ['https://placehold.co/600x400/111/fff?text=Sony+XM5'],
+            isFeatured: true,
+            isNew: false,
+            rating: 4.9,
+            category: createdCategories['audio'],
+            brand: createdBrands['sony']
+        },
+        {
+            name: 'Apple Watch Series 9',
+            slug: 'apple-watch-series-9',
+            description: 'Smarter. Brighter. Mightier.',
+            price: 45000,
+            discount: 0,
+            stock: 18,
+            images: ['https://placehold.co/600x400/111/fff?text=Apple+Watch+S9'],
+            isFeatured: true,
+            isNew: true,
+            rating: 4.7,
+            category: createdCategories['smart-watch'],
+            brand: createdBrands['apple']
+        },
+        {
+            name: 'Asus ROG Laptop',
+            slug: 'asus-rog-laptop',
+            description: 'Ultimate gaming performance.',
+            price: 250000,
+            discount: 5,
+            stock: 4,
+            images: ['https://placehold.co/600x400/111/fff?text=Asus+ROG'],
+            isFeatured: true,
+            isNew: true,
+            rating: 4.8,
+            category: createdCategories['gaming'],
+            brand: createdBrands['asus']
+        },
+        {
+            name: 'iPad Pro 11 inch',
+            slug: 'ipad-pro-11',
+            description: 'Supercharged by M2.',
+            price: 85000,
+            discount: 0,
+            stock: 10,
+            images: ['https://placehold.co/600x400/111/fff?text=iPad+Pro'],
+            isFeatured: false,
+            isNew: false,
+            rating: 4.6,
+            category: createdCategories['tablet'],
+            brand: createdBrands['apple']
+        },
+        {
+            name: 'Samsung Galaxy Watch 6',
+            slug: 'galaxy-watch-6',
+            description: 'Your wellness partner.',
+            price: 28000,
+            discount: 0,
+            stock: 15,
+            images: ['https://placehold.co/600x400/111/fff?text=Galaxy+Watch+6'],
+            isFeatured: false,
+            isNew: true,
+            rating: 4.5,
+            category: createdCategories['smart-watch'],
+            brand: createdBrands['samsung']
+        },
+        {
+            name: 'Xiaomi Pad 6',
+            slug: 'xiaomi-pad-6',
+            description: 'The work-from-anywhere king.',
+            price: 42000,
+            discount: 5,
+            stock: 12,
+            images: ['https://placehold.co/600x400/111/fff?text=Xiaomi+Pad+6'],
+            isFeatured: false,
+            isNew: true,
+            rating: 4.4,
+            category: createdCategories['tablet'],
+            brand: createdBrands['xiaomi']
+        },
+        {
+            name: 'Sony PS5 Console',
+            slug: 'sony-ps5',
+            description: 'Play has no limits.',
+            price: 65000,
+            discount: 0,
+            stock: 6,
+            images: ['https://placehold.co/600x400/111/fff?text=PS5'],
+            isFeatured: true,
+            isNew: false,
+            rating: 4.9,
+            category: createdCategories['gaming'],
+            brand: createdBrands['sony']
+        },
+        {
+            name: 'AirPods Pro 2',
+            slug: 'airpods-pro-2',
+            description: 'Magic like you\'ve never heard.',
+            price: 26000,
+            discount: 0,
+            stock: 30,
+            images: ['https://placehold.co/600x400/111/fff?text=AirPods+Pro+2'],
+            isFeatured: false,
+            isNew: false,
+            rating: 4.8,
+            category: createdCategories['audio'],
+            brand: createdBrands['apple']
+        },
+        {
+            name: 'Dell UltraSharp 27 Monitor',
+            slug: 'dell-monitor-27',
+            description: 'See every detail in 4K.',
+            price: 55000,
+            discount: 10,
+            stock: 8,
+            images: ['https://placehold.co/600x400/111/fff?text=Dell+Monitor'],
+            isFeatured: false,
+            isNew: true,
+            rating: 4.7,
+            category: createdCategories['gadgets'],
+            brand: createdBrands['dell']
+        },
+        {
+            name: 'Logitech G Pro Mouse',
+            slug: 'logitech-g-pro',
+            description: 'The choice of pros.',
+            price: 9500,
+            discount: 0,
+            stock: 25,
+            images: ['https://placehold.co/600x400/111/fff?text=G+Pro+Mouse'],
+            isFeatured: false,
+            isNew: false,
+            rating: 4.9,
+            category: createdCategories['gaming'],
+            brand: null
+        },
+        {
+            name: 'GoPro HERO 12',
+            slug: 'gopro-hero-12',
+            description: 'Capture everything.',
+            price: 48000,
+            discount: 0,
+            stock: 10,
+            images: ['https://placehold.co/600x400/111/fff?text=GoPro+12'],
+            isFeatured: true,
+            isNew: true,
+            rating: 4.6,
+            category: createdCategories['gadgets'],
+            brand: null
+        }
+    ];
+
+    for (const p of products) {
+        await prisma.product.upsert({
+            where: { slug: p.slug },
+            update: {},
+            create: {
+                name: p.name,
+                slug: p.slug,
+                description: p.description,
+                price: p.price,
+                discount: p.discount,
+                stock: p.stock,
+                images: p.images,
+                isFeatured: p.isFeatured,
+                isNew: p.isNew,
+                rating: p.rating,
+                categoryId: p.category.id,
+                brandId: p?.brand?.id || null,
+            }
+        });
+    }
+
+    // 4. Popup Offer
+    await prisma.popupOffer.upsert({
+        where: { id: 1 },
+        update: {},
+        create: {
+            title: 'Welcome to Sumash Tech!',
+            description: 'Get 10% OFF on your first purchase. Use code: WELCOME10',
+            image: 'https://placehold.co/600x400/orange/white?text=Special+Offer',
+            link: '/offers',
+            isActive: true
+        }
+    });
+
+    console.log("Database seeded successfully!");
+}
+
+main()
+    .catch((e) => {
+        console.error(e);
+        process.exit(1);
+    })
+    .finally(async () => {
+        await prisma.$disconnect();
+    });
