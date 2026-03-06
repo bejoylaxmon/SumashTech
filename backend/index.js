@@ -136,6 +136,63 @@ app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', message: 'Backend is running' });
 });
 
+// Temporary Seed Route
+app.get('/api/seed', async (req, res) => {
+    try {
+        // 1. Permissions
+        const permissionsData = ['manage_products', 'manage_categories', 'manage_brands', 'view_orders', 'manage_orders', 'manage_users', 'view_reports', 'buy_products', 'view_own_orders'];
+        const permissions = {};
+        for (const p of permissionsData) {
+            permissions[p] = await prisma.permission.upsert({ where: { name: p }, update: {}, create: { name: p } });
+        }
+
+        // 2. Roles
+        const rolesData = [
+            { name: 'SUPER_ADMIN', permissions: permissionsData },
+            { name: 'CUSTOMER', permissions: ['buy_products', 'view_own_orders'] }
+        ];
+        const roles = {};
+        for (const r of rolesData) {
+            roles[r.name] = await prisma.role.upsert({
+                where: { name: r.name },
+                update: { permissions: { set: r.permissions.map(p => ({ id: permissions[p].id })) } },
+                create: { name: r.name, permissions: { connect: r.permissions.map(p => ({ id: permissions[p].id })) } }
+            });
+        }
+
+        // 3. Admin User
+        await prisma.user.upsert({
+            where: { email: 'admin@sumashtech.com' },
+            update: { roleId: roles['SUPER_ADMIN'].id },
+            create: { email: 'admin@sumashtech.com', name: 'Admin User', password: 'admin123', roleId: roles['SUPER_ADMIN'].id }
+        });
+
+        // 4. Categories & Brands
+        const cat = await prisma.category.upsert({ where: { slug: 'smartphone' }, update: {}, create: { name: 'Smartphone', slug: 'smartphone' } });
+        const brand = await prisma.brand.upsert({ where: { slug: 'apple' }, update: {}, create: { name: 'Apple', slug: 'apple' } });
+
+        // 5. Products (including out of stock)
+        const products = [
+            { name: 'iPhone 15 Pro', slug: 'iphone-15-pro', price: 120000, stock: 10, isFeatured: true, isNew: true },
+            { name: 'iPhone 14', slug: 'iphone-14', price: 90000, stock: 0, isFeatured: false, isNew: false }, // OUT OF STOCK
+            { name: 'iPhone 13', slug: 'iphone-13', price: 75000, stock: 2, isFeatured: true, isNew: false }  // LOW STOCK
+        ];
+
+        for (const p of products) {
+            await prisma.product.upsert({
+                where: { slug: p.slug },
+                update: { stock: p.stock },
+                create: { ...p, categoryId: cat.id, brandId: brand.id, images: ['https://placehold.co/600x400?text=' + p.name] }
+            });
+        }
+
+        res.json({ message: 'Seeding successful' });
+    } catch (err) {
+        console.error('Seed error:', err);
+        res.status(500).json({ error: 'Seeding failed', details: err.message });
+    }
+});
+
 // Categories
 app.get('/api/categories', async (req, res) => {
     try {
