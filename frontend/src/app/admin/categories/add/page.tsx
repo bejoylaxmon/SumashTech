@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { API_BASE } from '@/lib/api';
 
 export default function AddCategoryPage() {
     const [name, setName] = useState('');
@@ -18,8 +19,7 @@ export default function AddCategoryPage() {
         const user = JSON.parse(localStorage.getItem('user') || '{}');
 
         try {
-            const apiBase = window.location.origin.replace(':3000', ':54321');
-            const res = await fetch(`${apiBase}/api/categories`, {
+            const res = await fetch(`${API_BASE}/api/categories`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

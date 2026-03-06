@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { API_BASE } from '@/lib/api';
 
 export default function AdminUsersPage() {
     const [users, setUsers] = useState<any[]>([]);
@@ -11,11 +12,10 @@ export default function AdminUsersPage() {
 
     const fetchData = async () => {
         try {
-            const apiBase = window.location.origin.replace(':3000', ':54321');
             const headers = { 'x-user-email': currentUser?.email || '' };
             const [uRes, rRes] = await Promise.all([
-                fetch(`${apiBase}/api/admin/users`, { headers }),
-                fetch(`${apiBase}/api/admin/roles`, { headers })
+                fetch(`${API_BASE}/api/admin/users`, { headers }),
+                fetch(`${API_BASE}/api/admin/roles`, { headers })
             ]);
             setUsers(await uRes.json());
             setRoles(await rRes.json());
@@ -30,8 +30,7 @@ export default function AdminUsersPage() {
 
     const updateRole = async (userId: number, roleId: number) => {
         try {
-            const apiBase = window.location.origin.replace(':3000', ':54321');
-            const res = await fetch(`${apiBase}/api/admin/users/${userId}/role`, {
+            const res = await fetch(`${API_BASE}/api/admin/users/${userId}/role`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',

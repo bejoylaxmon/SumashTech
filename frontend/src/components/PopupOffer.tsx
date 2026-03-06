@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { API_BASE } from '@/lib/api';
 
 interface PopupData {
     id: number;
@@ -22,7 +23,7 @@ export default function PopupOffer() {
 
         const fetchPopup = async () => {
             try {
-                const res = await fetch('http://localhost:54321/api/promotions/popup');
+                const res = await fetch(`${API_BASE}/api/promotions/popup`);
                 const data = await res.json();
                 if (data.id && data.isActive) {
                     setPopup(data);

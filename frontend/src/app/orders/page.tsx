@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { API_BASE } from '@/lib/api';
 
 export default function UserOrdersPage() {
     const [orders, setOrders] = useState<any[]>([]);
@@ -13,7 +14,7 @@ export default function UserOrdersPage() {
         const fetchOrders = async () => {
             if (!user) return;
             try {
-                const res = await fetch(`http://localhost:54321/api/orders/user/${user.email}`);
+                const res = await fetch(`${API_BASE}/api/orders/user/${user.email}`);
                 const data = await res.json();
                 if (Array.isArray(data)) {
                     setOrders(data);

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { API_BASE } from '@/lib/api';
 
 interface OrderItem {
   id: number;
@@ -36,7 +37,7 @@ export default function TrackOrderPage() {
     setOrder(null);
 
     try {
-      const res = await fetch(`http://localhost:54321/api/orders/${orderId}`);
+      const res = await fetch(`${API_BASE}/api/orders/${orderId}`);
 
       if (!res.ok) {
         if (res.status === 404) {

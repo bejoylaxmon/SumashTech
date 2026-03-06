@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { API_BASE } from '@/lib/api';
 
 export default function AdminOrdersPage() {
     const [orders, setOrders] = useState<any[]>([]);
@@ -9,7 +10,7 @@ export default function AdminOrdersPage() {
 
     const fetchOrders = async () => {
         try {
-            const apiBase = window.location.origin.replace(':3000', ':54321');
+            const apiBase = API_BASE;
             const user = JSON.parse(localStorage.getItem('user') || '{}');
             const res = await fetch(`${apiBase}/api/admin/orders`, {
                 headers: { 'x-user-email': user.email }
@@ -40,7 +41,7 @@ export default function AdminOrdersPage() {
 
     const updateStatus = async (orderId: number, status: string) => {
         try {
-            const apiBase = window.location.origin.replace(':3000', ':54321');
+            const apiBase = API_BASE;
             const user = JSON.parse(localStorage.getItem('user') || '{}');
             await fetch(`${apiBase}/api/admin/orders/${orderId}`, {
                 method: 'PATCH',
@@ -110,9 +111,9 @@ export default function AdminOrdersPage() {
                                         </td>
                                         <td className="px-10 py-8">
                                             <span className={`px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg border-2 border-white ${order.status === 'DELIVERED' ? 'bg-green-500 text-white shadow-green-200' :
-                                                    order.status === 'CANCELLED' ? 'bg-red-500 text-white shadow-red-200' :
-                                                        order.status === 'SHIPPED' ? 'bg-blue-500 text-white shadow-blue-200' :
-                                                            'bg-yellow-400 text-white shadow-yellow-200'
+                                                order.status === 'CANCELLED' ? 'bg-red-500 text-white shadow-red-200' :
+                                                    order.status === 'SHIPPED' ? 'bg-blue-500 text-white shadow-blue-200' :
+                                                        'bg-yellow-400 text-white shadow-yellow-200'
                                                 }`}>
                                                 {order.status}
                                             </span>

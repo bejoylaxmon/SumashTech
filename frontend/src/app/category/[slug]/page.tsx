@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { API_BASE } from '@/lib/api';
 import Link from 'next/link';
 import ProductCard from '@/components/ProductCard';
 
@@ -27,7 +28,7 @@ export default function CategoryPage() {
     useEffect(() => {
         const fetchProducts = async () => {
             try {
-                const res = await fetch(`http://localhost:54321/api/products?category=${slug}`);
+                const res = await fetch(`${API_BASE}/api/products?category=${slug}`);
                 const data = await res.json();
                 if (Array.isArray(data)) {
                     setProducts(data);

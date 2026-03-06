@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
+import { API_BASE } from '@/lib/api';
 
 export default function CheckoutPage() {
     const { cart, cartTotal, clearCart } = useCart();
@@ -31,8 +32,7 @@ export default function CheckoutPage() {
         }
 
         try {
-            const apiBase = window.location.origin.replace(':3000', ':54321');
-            const res = await fetch(`${apiBase}/api/orders`, {
+            const res = await fetch(`${API_BASE}/api/orders`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

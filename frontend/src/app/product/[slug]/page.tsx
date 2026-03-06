@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useCart } from '@/context/CartContext';
+import { API_BASE } from '@/lib/api';
 
 export default function ProductDetailsPage() {
     const { slug } = useParams();
@@ -18,8 +19,7 @@ export default function ProductDetailsPage() {
     useEffect(() => {
         const fetchProduct = async () => {
             try {
-                const apiBase = window.location.origin.replace(':3000', ':54321');
-                const res = await fetch(`${apiBase}/api/products/slug/${slug}`);
+                const res = await fetch(`${API_BASE}/api/products/slug/${slug}`);
                 if (!res.ok) throw new Error('Product not found');
                 const data = await res.json();
                 setProduct(data);
@@ -144,8 +144,8 @@ export default function ProductDetailsPage() {
                                         onClick={() => setQuantity(Math.min(quantity + 1, stock))}
                                         disabled={isOutOfStock || quantity >= stock}
                                         className={`w-10 h-10 flex items-center justify-center bg-white rounded-xl shadow-md font-black transition-all ${isOutOfStock || quantity >= stock
-                                                ? 'opacity-40 cursor-not-allowed text-gray-300'
-                                                : 'hover:bg-primary hover:text-white'
+                                            ? 'opacity-40 cursor-not-allowed text-gray-300'
+                                            : 'hover:bg-primary hover:text-white'
                                             }`}
                                     >+</button>
                                 </div>
@@ -160,8 +160,8 @@ export default function ProductDetailsPage() {
                                     onClick={() => { if (!isOutOfStock) addToCart(product, quantity); }}
                                     disabled={isOutOfStock}
                                     className={`flex-1 py-5 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl border-2 border-white/20 active:scale-95 transition-all ${isOutOfStock
-                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'
-                                            : 'bg-secondary text-white hover:bg-black shadow-secondary/30'
+                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'
+                                        : 'bg-secondary text-white hover:bg-black shadow-secondary/30'
                                         }`}
                                 >
                                     {isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
@@ -170,8 +170,8 @@ export default function ProductDetailsPage() {
                                     onClick={handleBuyNow}
                                     disabled={isOutOfStock}
                                     className={`flex-1 py-5 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl border-2 border-white/20 active:scale-95 transition-all ${isOutOfStock
-                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'
-                                            : 'bg-primary text-white hover:bg-orange-600 shadow-primary/30'
+                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'
+                                        : 'bg-primary text-white hover:bg-orange-600 shadow-primary/30'
                                         }`}
                                 >
                                     {isOutOfStock ? 'Unavailable' : 'Buy Now'}

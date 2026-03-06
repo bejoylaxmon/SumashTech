@@ -1,8 +1,10 @@
 import Link from "next/link";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:54321';
+
 async function getCategories() {
   try {
-    const res = await fetch('http://localhost:54321/api/categories', {
+    const res = await fetch(`${API_BASE}/api/categories`, {
       cache: 'no-store'
     });
 

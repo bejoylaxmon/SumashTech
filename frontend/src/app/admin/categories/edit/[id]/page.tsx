@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { API_BASE } from '@/lib/api';
 
 export default function EditCategoryPage() {
     const [name, setName] = useState('');
@@ -16,8 +17,7 @@ export default function EditCategoryPage() {
     useEffect(() => {
         const fetchCategory = async () => {
             try {
-                const apiBase = window.location.origin.replace(':3000', ':54321');
-                const res = await fetch(`${apiBase}/api/categories/${id}`);
+                const res = await fetch(`${API_BASE}/api/categories/${id}`);
                 const data = await res.json();
                 if (res.ok) {
                     setName(data.name);
@@ -42,8 +42,7 @@ export default function EditCategoryPage() {
         const user = JSON.parse(localStorage.getItem('user') || '{}');
 
         try {
-            const apiBase = window.location.origin.replace(':3000', ':54321');
-            const res = await fetch(`${apiBase}/api/categories/${id}`, {
+            const res = await fetch(`${API_BASE}/api/categories/${id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

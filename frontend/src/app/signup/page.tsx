@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { API_BASE } from '@/lib/api';
 
 export default function SignupPage() {
     const [name, setName] = useState('');
@@ -25,7 +26,7 @@ export default function SignupPage() {
         setLoading(true);
 
         try {
-            const res = await fetch('http://localhost:54321/api/auth/signup', {
+            const res = await fetch(`${API_BASE}/api/auth/signup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, email, password }),

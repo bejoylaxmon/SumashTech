@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { API_BASE } from '@/lib/api';
 import ProductCard from '@/components/ProductCard';
 
 export default function DealsPage() {
@@ -12,7 +13,7 @@ export default function DealsPage() {
     useEffect(() => {
         const fetchDeals = async () => {
             try {
-                const res = await fetch('http://localhost:54321/api/products');
+                const res = await fetch(`${API_BASE}/api/products`);
                 const data = await res.json();
                 if (Array.isArray(data)) {
                     // Filter products that have a discount > 0

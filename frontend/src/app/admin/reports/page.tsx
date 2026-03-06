@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { API_BASE } from '@/lib/api';
 
 export default function AdminReportsPage() {
     const [report, setReport] = useState<any>(null);
@@ -11,7 +12,7 @@ export default function AdminReportsPage() {
     useEffect(() => {
         const fetchReport = async () => {
             try {
-                const res = await fetch('http://localhost:54321/api/admin/reports/sales', {
+                const res = await fetch(`${API_BASE}/api/admin/reports/sales`, {
                     headers: { 'x-user-email': user?.email || '' }
                 });
                 setReport(await res.json());
@@ -103,8 +104,8 @@ export default function AdminReportsPage() {
                             {report?.statusCounts && Object.entries(report.statusCounts).map(([status, count]: [string, any]) => (
                                 <div key={status} className="flex justify-between items-center p-5 bg-gray-50 rounded-2xl border border-gray-100">
                                     <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${status === 'DELIVERED' ? 'bg-green-500 text-white' :
-                                            status === 'CANCELLED' ? 'bg-red-500 text-white' :
-                                                'bg-blue-500 text-white'
+                                        status === 'CANCELLED' ? 'bg-red-500 text-white' :
+                                            'bg-blue-500 text-white'
                                         }`}>{status}</span>
                                     <span className="font-black text-secondary text-xl font-mono">{count}</span>
                                 </div>

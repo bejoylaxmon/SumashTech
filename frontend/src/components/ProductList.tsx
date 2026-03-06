@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import ProductCard from './ProductCard';
+import { API_BASE } from '@/lib/api';
 
 interface ProductListProps {
   title: string;
@@ -16,7 +17,7 @@ export default function ProductList({ title, filter }: ProductListProps) {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const url = `http://localhost:54321/api/products${filter ? `?${filter}=true` : ''}`;
+        const url = `${API_BASE}/api/products${filter ? `?${filter}=true` : ''}`;
         const res = await fetch(url);
         const data = await res.json();
         if (Array.isArray(data)) {

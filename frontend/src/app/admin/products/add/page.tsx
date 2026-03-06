@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { API_BASE } from '@/lib/api';
 
 export default function AddProductPage() {
     const [name, setName] = useState('');
@@ -18,8 +19,7 @@ export default function AddProductPage() {
 
     useEffect(() => {
         const fetchCategories = async () => {
-            const apiBase = window.location.origin.replace(':3000', ':54321');
-            const res = await fetch(`${apiBase}/api/categories`);
+            const res = await fetch(`${API_BASE}/api/categories`);
             const data = await res.json();
             setCategories(data);
         };
@@ -41,8 +41,7 @@ export default function AddProductPage() {
         const user = JSON.parse(localStorage.getItem('user') || '{}');
 
         try {
-            const apiBase = window.location.origin.replace(':3000', ':54321');
-            const res = await fetch(`${apiBase}/api/products`, {
+            const res = await fetch(`${API_BASE}/api/products`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

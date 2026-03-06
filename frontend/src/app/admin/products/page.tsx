@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { API_BASE } from '@/lib/api';
 
 export default function AdminProductsPage() {
     const [products, setProducts] = useState<any[]>([]);
@@ -12,7 +13,7 @@ export default function AdminProductsPage() {
 
     const fetchProducts = async () => {
         try {
-            const res = await fetch('http://localhost:54321/api/products');
+            const res = await fetch(`${API_BASE}/api/products`);
             const data = await res.json();
             if (Array.isArray(data)) {
                 setProducts(data);
@@ -35,7 +36,7 @@ export default function AdminProductsPage() {
         if (!confirm('Are you sure you want to delete this product?')) return;
 
         try {
-            const res = await fetch(`http://localhost:54321/api/products/${id}`, {
+            const res = await fetch(`${API_BASE}/api/products/${id}`, {
                 method: 'DELETE',
                 headers: { 'x-user-email': user?.email || '' }
             });

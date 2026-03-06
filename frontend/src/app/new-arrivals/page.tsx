@@ -1,8 +1,10 @@
 import ProductCard from '@/components/ProductCard';
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:54321';
+
 async function getNewArrivals() {
   try {
-    const res = await fetch('http://localhost:54321/api/products?isNew=true', {
+    const res = await fetch(`${API_BASE}/api/products?isNew=true`, {
       cache: 'no-store'
     });
 

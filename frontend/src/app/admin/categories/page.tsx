@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { API_BASE } from '@/lib/api';
 
 export default function AdminCategoriesPage() {
     const [categories, setCategories] = useState<any[]>([]);
@@ -12,7 +13,7 @@ export default function AdminCategoriesPage() {
 
     const fetchCategories = async () => {
         try {
-            const res = await fetch('http://localhost:54321/api/categories');
+            const res = await fetch(`${API_BASE}/api/categories`);
             const data = await res.json();
             if (Array.isArray(data)) {
                 setCategories(data);
@@ -35,7 +36,7 @@ export default function AdminCategoriesPage() {
         if (!confirm('Are you sure? This may affect products in this category.')) return;
 
         try {
-            const res = await fetch(`http://localhost:54321/api/categories/${id}`, {
+            const res = await fetch(`${API_BASE}/api/categories/${id}`, {
                 method: 'DELETE',
                 headers: { 'x-user-email': user?.email || '' }
             });

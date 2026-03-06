@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { API_BASE } from '@/lib/api';
 
 export default function EditProductPage() {
     const [name, setName] = useState('');
@@ -21,10 +22,9 @@ export default function EditProductPage() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const apiBase = window.location.origin.replace(':3000', ':54321');
                 const [pRes, cRes] = await Promise.all([
-                    fetch(`${apiBase}/api/products/${params.id}`),
-                    fetch(`${apiBase}/api/categories`)
+                    fetch(`${API_BASE}/api/products/${params.id}`),
+                    fetch(`${API_BASE}/api/categories`)
                 ]);
                 const product = await pRes.json();
                 const cats = await cRes.json();
@@ -61,8 +61,7 @@ export default function EditProductPage() {
         const user = JSON.parse(localStorage.getItem('user') || '{}');
 
         try {
-            const apiBase = window.location.origin.replace(':3000', ':54321');
-            const res = await fetch(`${apiBase}/api/products/${params.id}`, {
+            const res = await fetch(`${API_BASE}/api/products/${params.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
