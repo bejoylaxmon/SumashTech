@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:54321';
 
 export async function GET(request: Request) {
+
   const { searchParams } = new URL(request.url);
   const category = searchParams.get('category');
   const isFeatured = searchParams.get('isFeatured');
