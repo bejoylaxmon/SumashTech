@@ -1,6 +1,28 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Facebook, Twitter, Instagram, Youtube, Linkedin } from 'lucide-react';
+import { API_BASE } from '@/lib/api';
 
 export default function Footer() {
+  const [phone, setPhone] = useState('+88 01234 567890');
+  const [address, setAddress] = useState('Dhaka, Bangladesh');
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/home-settings`);
+        const data = await res.json();
+        if (data.phone) setPhone(data.phone);
+        if (data.address) setAddress(data.address);
+      } catch (err) {
+        console.error('Failed to fetch footer settings:', err);
+      }
+    };
+    fetchSettings();
+  }, []);
+
   return (
     <footer className="bg-gray-900 text-gray-300 py-12">
       <div className="container mx-auto px-4">
@@ -21,10 +43,10 @@ export default function Footer() {
           <div>
             <h4 className="text-white font-semibold mb-4">Quick Links</h4>
             <ul className="space-y-2 text-sm">
-              <li><a href="#" className="hover:text-primary">About Us</a></li>
-              <li><a href="#" className="hover:text-primary">Contact</a></li>
-              <li><a href="#" className="hover:text-primary">Terms & Conditions</a></li>
-              <li><a href="#" className="hover:text-primary">Privacy Policy</a></li>
+              <li><Link href="/about" className="hover:text-primary">About Us</Link></li>
+              <li><Link href="/contact" className="hover:text-primary">Contact</Link></li>
+              <li><Link href="/terms" className="hover:text-primary">Terms & Conditions</Link></li>
+              <li><Link href="/privacy" className="hover:text-primary">Privacy Policy</Link></li>
             </ul>
           </div>
           
@@ -41,9 +63,9 @@ export default function Footer() {
           <div>
             <h4 className="text-white font-semibold mb-4">Contact Us</h4>
             <ul className="space-y-2 text-sm">
-              <li> Dhaka, Bangladesh</li>
+              <li>{address}</li>
               <li>support@sumashtech.com</li>
-              <li>+88 01234 567890</li>
+              <li>{phone}</li>
               <li>Sat - Thu: 9:00 AM - 9:00 PM</li>
             </ul>
           </div>

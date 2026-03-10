@@ -136,3 +136,22 @@ model PopupOffer {
   updatedAt   DateTime @updatedAt
 }
 
+model HomeSettings {
+  id          Int      @id @default(autoincrement())
+  phone       String   @default("+88 01234 567890")
+  address     String   @default("Dhaka, Bangladesh")
+  heroSlides  Json     @default("[{\"id\":1,\"title\":\"iPhone 16 Pro Max\",\"subtitle\":\"Experience the ultimate Apple innovation. Titanium design. Pro camera system.\",\"badge\":\"New Arrival\",\"price\":\"Starting from ৳165,000\",\"cta\":\"Pre-order Now\",\"link\":\"/category/smartphone-iphone\",\"bg\":\"from-secondary to-gray-800\",\"accent\":\"16\",\"image\":\"https://placehold.co/800x600/111/fff?text=iPhone+16+Pro+Max\"},{\"id\":2,\"title\":\"MacBook Air M3\",\"subtitle\":\"Strikingly thin. Fast. All-day battery life. The world's best-selling laptop.\",\"badge\":\"Workstation\",\"price\":\"Exclusive Price ৳125,000\",\"cta\":\"Explore Models\",\"link\":\"/category/mac\",\"bg\":\"from-blue-900 to-secondary\",\"accent\":\"M3\",\"image\":\"https://placehold.co/800x600/1e293b/fff?text=MacBook+Air+M3\"},{\"id\":3,\"title\":\"EcoFlow Delta 2\",\"subtitle\":\"Power for any situation. Fast charging. Reliable portable power station.\",\"badge\":\"Outdoor Gear\",\"price\":\"Special Offer ৳68,000\",\"cta\":\"Buy Now\",\"link\":\"/category/gadgets\",\"bg\":\"from-green-900 to-secondary\",\"accent\":\"SOLAR\",\"image\":\"https://placehold.co/800x600/064e3b/fff?text=EcoFlow+Delta+2\"}]")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model PageContent {
+  id        Int      @id @default(autoincrement())
+  slug      String   @unique
+  title     String
+  content   String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+

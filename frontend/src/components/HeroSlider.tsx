@@ -2,8 +2,22 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { API_BASE } from '@/lib/api';
 
-const slides = [
+interface HeroSlide {
+    id: number;
+    title: string;
+    subtitle: string;
+    badge: string;
+    price: string;
+    cta: string;
+    link: string;
+    bg: string;
+    accent: string;
+    image: string;
+}
+
+const defaultSlides: HeroSlide[] = [
     {
         id: 1,
         title: "iPhone 16 Pro Max",
@@ -44,13 +58,34 @@ const slides = [
 
 export default function HeroSlider() {
     const [current, setCurrent] = useState(0);
+    const [slides, setSlides] = useState<HeroSlide[]>(defaultSlides);
 
     useEffect(() => {
-        const timer = setInterval(() => {
-            setCurrent((prev) => (prev + 1) % slides.length);
-        }, 5000);
-        return () => clearInterval(timer);
+        const fetchSlides = async () => {
+            try {
+                const res = await fetch(`${API_BASE}/api/home-settings`);
+                const data = await res.json();
+                const slides = typeof data.heroSlides === 'string' 
+                    ? JSON.parse(data.heroSlides) 
+                    : (data.heroSlides || []);
+                if (Array.isArray(slides) && slides.length > 0) {
+                    setSlides(slides);
+                }
+            } catch (err) {
+                console.error('Failed to fetch hero slides:', err);
+            }
+        };
+        fetchSlides();
     }, []);
+
+    useEffect(() => {
+        if (slides.length > 0) {
+            const timer = setInterval(() => {
+                setCurrent((prev) => (prev + 1) % slides.length);
+            }, 5000);
+            return () => clearInterval(timer);
+        }
+    }, [slides]);
 
     const next = () => setCurrent((prev) => (prev + 1) % slides.length);
     const prev = () => setCurrent((prev) => (prev - 1 + slides.length) % slides.length);

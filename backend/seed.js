@@ -434,6 +434,38 @@ async function main() {
         }
     });
 
+    // 5. CMS Pages
+    const cmsPages = [
+        {
+            slug: 'about',
+            title: 'About Us',
+            content: '<h2>Welcome to SumashTech</h2><p>SumashTech is your one-stop shop for the latest electronics and gadgets in Bangladesh. We specialize in providing authentic Apple products, smartphones, laptops, and accessories at competitive prices.</p><h3>Our Mission</h3><p>To bring the latest technology to Bangladesh with genuine products and excellent customer service.</p><h3>Why Choose Us?</h3><ul><li>100% authentic products</li><li>Warranty support</li><li>Fast delivery across Bangladesh</li><li>24/7 customer support</li></ul>'
+        },
+        {
+            slug: 'contact',
+            title: 'Contact Us',
+            content: '<h2>Get in Touch</h2><p>We are here to help! Reach out to us through any of the following channels:</p><h3>Phone</h3><p>+88 01234 567890</p><h3>Email</h3><p>support@sumashtech.com</p><h3>Address</h3><p>Dhaka, Bangladesh</p><h3>Working Hours</h3><p>Sat - Thu: 9:00 AM - 9:00 PM</p>'
+        },
+        {
+            slug: 'terms',
+            title: 'Terms & Conditions',
+            content: '<h2>Terms and Conditions</h2><p>Welcome to SumashTech. By using our website, you agree to these terms.</p><h3>Orders</h3><p>All orders are subject to availability and confirmation. Prices are subject to change without notice.</p><h3>Payment</h3><p>We accept Cash on Delivery (COD) and bKash payments.</p><h3>Returns</h3><p>Products can be returned within 7 days if they are defective or not as described.</p><h3>Warranty</h3><p>All Apple products come with manufacturer warranty. Other products have warranty as specified.</p>'
+        },
+        {
+            slug: 'privacy',
+            title: 'Privacy Policy',
+            content: '<h2>Privacy Policy</h2><p>At SumashTech, we value your privacy and are committed to protecting your personal information.</p><h3>Information We Collect</h3><p>We collect information you provide during registration, ordering, and when you contact us.</p><h3>How We Use Your Information</h3><p>Your information is used to process orders, improve our services, and communicate with you.</p><h3>Data Security</h3><p>We implement security measures to protect your personal information.</p><h3>Contact</h3><p>If you have questions about our privacy policy, please contact us.</p>'
+        }
+    ];
+
+    for (const page of cmsPages) {
+        await prisma.pageContent.upsert({
+            where: { slug: page.slug },
+            update: {},
+            create: page
+        });
+    }
+
     console.log("Database seeded successfully!");
 }
 

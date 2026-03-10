@@ -365,7 +365,7 @@ app.get('/api/promotions/popup', async (req, res) => {
 });
 
 // Update Popup Offer (Admin)
-app.patch('/api/promotions/popup/:id', checkPermission('manage_products'), async (req, res) => {
+app.patch('/api/promotions/popup/:id', checkPermission(['manage_products', 'edit_shop', 'manage_inventory']), async (req, res) => {
     try {
         const popup = await prisma.popupOffer.update({
             where: { id: parseInt(req.params.id) },
@@ -374,6 +374,128 @@ app.patch('/api/promotions/popup/:id', checkPermission('manage_products'), async
         res.json(popup);
     } catch (err) {
         res.status(500).json({ error: 'Failed to update popup offer' });
+    }
+});
+
+// Create Popup Offer (Admin)
+app.post('/api/promotions/popup', checkPermission(['manage_products', 'edit_shop', 'manage_inventory']), async (req, res) => {
+    try {
+        const { title, description, image, link, isActive } = req.body;
+        const popup = await prisma.popupOffer.create({
+            data: { title, description, image, link, isActive: isActive ?? true }
+        });
+        res.status(201).json(popup);
+    } catch (err) {
+        console.error('Popup creation error:', err);
+        res.status(500).json({ error: 'Failed to create popup offer' });
+    }
+});
+
+// Delete Popup Offer (Admin)
+app.delete('/api/promotions/popup/:id', checkPermission(['manage_products', 'edit_shop', 'manage_inventory']), async (req, res) => {
+    try {
+        await prisma.popupOffer.delete({
+            where: { id: parseInt(req.params.id) }
+        });
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to delete popup offer' });
+    }
+});
+
+// Get All Popup Offers (Admin)
+app.get('/api/admin/promotions/popup', checkPermission(['manage_products', 'edit_shop', 'manage_inventory']), async (req, res) => {
+    try {
+        const popups = await prisma.popupOffer.findMany({
+            orderBy: { createdAt: 'desc' }
+        });
+        res.json(popups);
+    } catch (err) {
+        console.error('Popup fetch error:', err);
+        res.status(500).json({ error: 'Failed to fetch popup offers' });
+    }
+});
+
+// Home Settings (Public - for reading)
+app.get('/api/home-settings', async (req, res) => {
+    try {
+        let settings = await prisma.homeSettings.findFirst();
+        if (!settings) {
+            settings = await prisma.homeSettings.create({
+                data: {}
+            });
+        }
+        res.json(settings);
+    } catch (err) {
+        console.error('Home settings fetch error:', err);
+        res.status(500).json({ error: 'Failed to fetch home settings' });
+    }
+});
+
+// Update Home Settings (Admin)
+app.put('/api/home-settings', checkPermission(['manage_products', 'edit_shop', 'manage_inventory']), async (req, res) => {
+    try {
+        console.log('PUT /api/home-settings body:', req.body);
+        const { phone, address, heroSlides } = req.body;
+        
+        let settings = await prisma.homeSettings.findFirst();
+        if (!settings) {
+            settings = await prisma.homeSettings.create({
+                data: { phone, address, heroSlides }
+            });
+        } else {
+            settings = await prisma.homeSettings.update({
+                where: { id: settings.id },
+                data: { phone, address, heroSlides }
+            });
+        }
+        res.json(settings);
+    } catch (err) {
+        console.error('Home settings update error:', err);
+        res.status(500).json({ error: 'Failed to update home settings', details: err.message });
+    }
+});
+
+// Get all CMS pages (Admin)
+app.get('/api/admin/pages', checkPermission(['manage_products', 'edit_shop', 'manage_inventory']), async (req, res) => {
+    try {
+        const pages = await prisma.pageContent.findMany({
+            orderBy: { slug: 'asc' }
+        });
+        res.json(pages);
+    } catch (err) {
+        console.error('Pages fetch error:', err);
+        res.status(500).json({ error: 'Failed to fetch pages' });
+    }
+});
+
+// Get single CMS page (Public)
+app.get('/api/pages/:slug', async (req, res) => {
+    try {
+        const page = await prisma.pageContent.findUnique({
+            where: { slug: req.params.slug }
+        });
+        if (!page) return res.status(404).json({ error: 'Page not found' });
+        res.json(page);
+    } catch (err) {
+        console.error('Page fetch error:', err);
+        res.status(500).json({ error: 'Failed to fetch page' });
+    }
+});
+
+// Update CMS page (Admin)
+app.put('/api/pages/:slug', checkPermission(['manage_products', 'edit_shop', 'manage_inventory']), async (req, res) => {
+    try {
+        const { title, content, isActive } = req.body;
+        const page = await prisma.pageContent.upsert({
+            where: { slug: req.params.slug },
+            update: { title, content, isActive },
+            create: { slug: req.params.slug, title, content, isActive: isActive ?? true }
+        });
+        res.json(page);
+    } catch (err) {
+        console.error('Page update error:', err);
+        res.status(500).json({ error: 'Failed to update page' });
     }
 });
 

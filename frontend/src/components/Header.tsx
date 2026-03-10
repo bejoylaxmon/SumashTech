@@ -8,6 +8,7 @@ import { Facebook, Instagram, Youtube, Phone, MapPin, Package, Search, ShoppingC
 
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
+import { API_BASE } from '@/lib/api';
 
 export default function Header() {
     const { user, logout } = useAuth();
@@ -16,7 +17,23 @@ export default function Header() {
     const pathname = usePathname();
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [companyPhone, setCompanyPhone] = useState('+880 1971-122222');
+    const [companyAddress, setCompanyAddress] = useState('Shop Locations');
     const menuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const fetchSettings = async () => {
+            try {
+                const res = await fetch(`${API_BASE}/api/home-settings`);
+                const data = await res.json();
+                if (data.phone) setCompanyPhone(data.phone);
+                if (data.address) setCompanyAddress(data.address);
+            } catch (err) {
+                console.error('Failed to fetch header settings:', err);
+            }
+        };
+        fetchSettings();
+    }, []);
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -69,12 +86,12 @@ export default function Header() {
             {/* Top Bar */}
             <div className="bg-secondary text-black text-[10px] py-2 px-4 hidden md:flex border-b border-white/5">
                 <div className="container mx-auto flex justify-between items-center font-black uppercase tracking-[0.15em]">
-<div className="flex gap-6 items-center">
+                    <div className="flex gap-6 items-center">
                         <span className="flex items-center gap-2 hover:text-primary transition-colors cursor-pointer">
-                            <Phone className="w-3.5 h-3.5" /> +880 1971-122222
+                            <Phone className="w-3.5 h-3.5" /> {companyPhone}
                         </span>
                         <span className="flex items-center gap-2 hover:text-primary transition-colors cursor-pointer">
-                            <MapPin className="w-3.5 h-3.5" /> Shop Locations
+                            <MapPin className="w-3.5 h-3.5" /> {companyAddress}
                         </span>
                     </div>
 <div className="flex gap-6 items-center">
@@ -322,6 +339,12 @@ export default function Header() {
                                     )}
                                     {(user.permissions?.includes('view_financial_reports') || user.role === 'SUPER_ADMIN') && (
                                         <Link href="/admin/reports" className={navLinkClass('/admin/reports', 'text-teal-600')}>📊 Reports</Link>
+                                    )}
+                                    {(user.role === 'SUPER_ADMIN' || user.role === 'MANAGER') && (
+                                        <>
+                                            <Link href="/admin/home-settings" className={navLinkClass('/admin/home-settings', 'text-pink-600')}>🏠 Home Settings</Link>
+                                            <Link href="/admin/popup-offers" className={navLinkClass('/admin/popup-offers', 'text-red-600')}>🎯 Popup Offers</Link>
+                                        </>
                                     )}
                                 </>
                             )}

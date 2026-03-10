@@ -17,7 +17,7 @@ export default function RouteGuard({ children }: { children: React.ReactNode }) 
             if (isAdminRoute) {
                 if (!user) {
                     router.push('/login');
-                } else if (user.role === 'CUSTOMER') {
+                } else if (user.role !== 'SUPER_ADMIN' && user.role !== 'MANAGER') {
                     router.push('/');
                 }
             }
