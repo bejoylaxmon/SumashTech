@@ -20,6 +20,7 @@ export default function Header() {
     const [companyPhone, setCompanyPhone] = useState('+880 1971-122222');
     const [companyAddress, setCompanyAddress] = useState('Shop Locations');
     const menuRef = useRef<HTMLDivElement>(null);
+    const [categories, setCategories] = useState<any[]>([]);
 
     useEffect(() => {
         const fetchSettings = async () => {
@@ -33,6 +34,17 @@ export default function Header() {
             }
         };
         fetchSettings();
+
+        const fetchCategories = async () => {
+            try {
+                const res = await fetch(`${API_BASE}/api/categories`);
+                const data = await res.json();
+                setCategories(data);
+            } catch (err) {
+                console.error('Failed to fetch categories:', err);
+            }
+        };
+        fetchCategories();
     }, []);
 
     // Close dropdown when clicking outside
@@ -244,80 +256,40 @@ export default function Header() {
                                 <>
                                     <Link href="/" className={navLinkClass('/', 'text-primary')}>HOME</Link>
 
-                                    {/* Mega Menu Items */}
-                                    <div className="group h-full">
-                                        <button className="text-xs font-black h-full flex items-center px-4 uppercase tracking-wider text-gray-500 group-hover:text-secondary group-hover:border-b-2 group-hover:border-secondary transition-all">
-                                            SMARTPHONES <span className="ml-1 text-[8px]">▼</span>
-                                        </button>
-                                        <div className="absolute left-0 top-full w-full bg-white/95 backdrop-blur-xl shadow-2xl border-t border-gray-100 py-10 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
-                                            <div className="container mx-auto px-4 grid grid-cols-4 gap-12">
-                                                <div className="space-y-4">
-                                                    <h4 className="font-black text-secondary text-sm uppercase tracking-widest border-b border-gray-100 pb-2">Brands</h4>
-                                                    <ul className="space-y-2 text-xs font-bold text-gray-500">
-                                                        <li className="hover:text-primary transition-colors"><Link href="/category/smartphone-iphone">Apple (iPhone)</Link></li>
-                                                        <li className="hover:text-primary transition-colors"><Link href="/category/smartphone-samsung">Samsung</Link></li>
-                                                        <li className="hover:text-primary transition-colors"><Link href="/category/smartphone-google">Google Pixel</Link></li>
-                                                        <li className="hover:text-primary transition-colors"><Link href="/category/smartphone-xiaomi">Xiaomi</Link></li>
-                                                    </ul>
-                                                </div>
-                                                <div className="space-y-4">
-                                                    <h4 className="font-black text-secondary text-sm uppercase tracking-widest border-b border-gray-100 pb-2">Used Devices</h4>
-                                                    <ul className="space-y-2 text-xs font-bold text-gray-500">
-                                                        <li className="hover:text-primary transition-colors"><Link href="/category/used-iphone">Used iPhone</Link></li>
-                                                        <li className="hover:text-primary transition-colors"><Link href="/category/used-android">Used Android</Link></li>
-                                                        <li className="hover:text-primary transition-colors"><Link href="/category/exchange">Exchange Program</Link></li>
-                                                    </ul>
-                                                </div>
-                                                <div className="col-span-2 bg-gray-50 rounded-3xl p-8 flex items-center justify-between overflow-hidden relative">
-                                                    <div className="relative z-10">
-                                                        <span className="text-primary text-[10px] font-black uppercase tracking-widest block mb-2">New Arrival</span>
-                                                        <h3 className="text-2xl font-black text-secondary mb-4 leading-tight">iPhone 16 Pro Max<br />Natural Titanium</h3>
-                                                        <Link href="/category/smartphone-iphone" className="inline-block bg-secondary text-black px-6 py-3 rounded-full hover:bg-black hover:text-white transition-all">SHOP NOW</Link>
+                                    {/* Dynamic Category Menu Items */}
+                                    {categories.filter((cat: any) => !cat.parentId).map((category: any) => (
+                                        category.children && category.children.length > 0 ? (
+                                            <div key={category.id} className="group h-full">
+                                                <button className="text-xs font-black h-full flex items-center px-4 uppercase tracking-wider text-gray-500 group-hover:text-secondary group-hover:border-b-2 group-hover:border-secondary transition-all">
+                                                    {category.name} <span className="ml-1 text-[8px]">▼</span>
+                                                </button>
+                                                <div className="absolute left-0 top-full w-full bg-white/95 backdrop-blur-xl shadow-2xl border-t border-gray-100 py-10 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
+                                                    <div className="container mx-auto px-4">
+                                                        <div className="grid grid-cols-4 gap-8">
+                                                            <div className="space-y-4 col-span-1">
+                                                                <h4 className="font-black text-secondary text-sm uppercase tracking-widest border-b border-gray-100 pb-2">{category.name}</h4>
+                                                                <ul className="space-y-2 text-xs font-bold text-gray-500">
+                                                                    {category.children.map((child: any) => (
+                                                                        <li key={child.id} className="hover:text-primary transition-colors">
+                                                                            <Link href={`/category/${child.slug}`}>{child.name}</Link>
+                                                                        </li>
+                                                                    ))}
+                                                                </ul>
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                    <div className="text-8xl opacity-10 absolute -right-4 -bottom-4 font-black text-secondary select-none">16</div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="group h-full">
-                                        <button className="text-xs font-black h-full flex items-center px-4 uppercase tracking-wider text-gray-500 group-hover:text-secondary group-hover:border-b-2 group-hover:border-secondary transition-all">
-                                            LAPTOPS <span className="ml-1 text-[8px]">▼</span>
-                                        </button>
-                                        <div className="absolute left-0 top-full w-full bg-white/95 backdrop-blur-xl shadow-2xl border-t border-gray-100 py-10 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
-                                            <div className="container mx-auto px-4 grid grid-cols-4 gap-12">
-                                                <div className="space-y-4">
-                                                    <h4 className="font-black text-secondary text-sm uppercase tracking-widest border-b border-gray-100 pb-2">Apple Mac</h4>
-                                                    <ul className="space-y-2 text-xs font-bold text-gray-500">
-                                                        <li className="hover:text-primary transition-colors"><Link href="/category/mac-macbook-pro">MacBook Pro</Link></li>
-                                                        <li className="hover:text-primary transition-colors"><Link href="/category/mac-macbook-air">MacBook Air</Link></li>
-                                                        <li className="hover:text-primary transition-colors"><Link href="/category/mac-imac">iMac / Mac Mini</Link></li>
-                                                    </ul>
-                                                </div>
-                                                <div className="space-y-4">
-                                                    <h4 className="font-black text-secondary text-sm uppercase tracking-widest border-b border-gray-100 pb-2">Windows</h4>
-                                                    <ul className="space-y-2 text-xs font-bold text-gray-500">
-                                                        <li className="hover:text-primary transition-colors"><Link href="/category/laptop-gaming">Gaming Laptops</Link></li>
-                                                        <li className="hover:text-primary transition-colors"><Link href="/category/laptop-asus">ASUS ROG / TUF</Link></li>
-                                                        <li className="hover:text-primary transition-colors"><Link href="/category/laptop-hp">HP Victus</Link></li>
-                                                    </ul>
-                                                </div>
-                                                <div className="col-span-2 bg-secondary rounded-3xl p-8 flex items-center justify-between overflow-hidden relative">
-                                                    <div className="relative z-10">
-                                                        <span className="text-primary text-[10px] font-black uppercase tracking-widest block mb-2">Workstation</span>
-                                                        <h3 className="text-2xl font-black text-white mb-4 leading-tight">MacBook Air M3<br />Powerful. Portable.</h3>
-                                                        <Link href="/category/mac" className="inline-block bg-primary text-black text-[10px] font-black px-6 py-3 rounded-full hover:bg-orange-600 transition-all">EXPLORE</Link>
-                                                    </div>
-                                                    <div className="text-8xl opacity-5 absolute -right-4 -bottom-4 font-black text-white select-none">M3</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <Link href="/category/ipad" className={navLinkClass('/category/ipad', 'text-secondary')}>TABLETS</Link>
-                                    <Link href="/category/watch" className={navLinkClass('/category/watch', 'text-secondary')}>WATCH</Link>
-                                    <Link href="/category/gadgets" className={navLinkClass('/category/gadgets', 'text-secondary')}>GADGETS</Link>
-                                    <Link href="/category/accessories" className={navLinkClass('/category/accessories', 'text-secondary')}>ACCESSORIES</Link>
+                                        ) : (
+                                            <Link 
+                                                key={category.id} 
+                                                href={`/category/${category.slug}`}
+                                                className={navLinkClass(`/category/${category.slug}`, 'text-secondary')}
+                                            >
+                                                {category.name.toUpperCase()}
+                                            </Link>
+                                        )
+                                    ))}
                                 </>
                             ) : (
                                 <>

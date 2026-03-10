@@ -230,7 +230,12 @@ app.get('/api/seed', async (req, res) => {
 // Categories
 app.get('/api/categories', async (req, res) => {
     try {
-        const categories = await prisma.category.findMany();
+        const categories = await prisma.category.findMany({
+            include: {
+                parent: true,
+                children: true
+            }
+        });
         res.json(categories);
     } catch (err) {
         res.status(500).json({ error: 'Failed to fetch categories' });

@@ -1,15 +1,24 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { API_BASE } from '@/lib/api';
 
 export default function AddCategoryPage() {
     const [name, setName] = useState('');
     const [slug, setSlug] = useState('');
+    const [parentId, setParentId] = useState('');
+    const [categories, setCategories] = useState<{id: number; name: string; slug: string}[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const router = useRouter();
+
+    useEffect(() => {
+        fetch(`${API_BASE}/api/categories`)
+            .then(res => res.json())
+            .then(data => setCategories(data))
+            .catch(console.error);
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -25,7 +34,11 @@ export default function AddCategoryPage() {
                     'Content-Type': 'application/json',
                     'x-user-email': user.email
                 },
-                body: JSON.stringify({ name, slug }),
+                body: JSON.stringify({ 
+                    name, 
+                    slug, 
+                    parentId: parentId ? parseInt(parentId) : null 
+                }),
             });
 
             if (!res.ok) throw new Error('Failed to add category');
@@ -51,6 +64,16 @@ export default function AddCategoryPage() {
                     <label className="block text-xs font-black text-gray-400 mb-2 uppercase tracking-widest">Slug</label>
                     <input type="text" value={slug} onChange={(e) => setSlug(e.target.value)} required
                         className="w-full border-2 border-gray-100 rounded-2xl px-5 py-3.5 focus:border-primary transition-all font-bold text-secondary outline-none" />
+                </div>
+                <div>
+                    <label className="block text-xs font-black text-gray-400 mb-2 uppercase tracking-widest">Parent Category</label>
+                    <select value={parentId} onChange={(e) => setParentId(e.target.value)}
+                        className="w-full border-2 border-gray-100 rounded-2xl px-5 py-3.5 focus:border-primary transition-all font-bold text-secondary outline-none">
+                        <option value="">No Parent (Top Level)</option>
+                        {categories.map(cat => (
+                            <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        ))}
+                    </select>
                 </div>
                 <button type="submit" disabled={loading}
                     className="w-full bg-primary text-black font-black py-5 rounded-[2rem] shadow-2xl shadow-primary/40 hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-[0.2em] text-sm mt-4 border border-white/10">
