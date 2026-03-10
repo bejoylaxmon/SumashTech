@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
+import { useAuth } from '@/context/AuthContext';
 import { API_BASE } from '@/lib/api';
 
 export default function CheckoutPage() {
@@ -13,6 +14,7 @@ export default function CheckoutPage() {
     const [phone, setPhone] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('COD');
     const [loading, setLoading] = useState(false);
+    const { user: authUser } = useAuth();
     const router = useRouter();
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -38,8 +40,8 @@ export default function CheckoutPage() {
                 body: JSON.stringify({
                     userId: user.id,
                     total: cartTotal,
-                    address,
-                    phone,
+                    address: address || (authUser?.role !== 'CUSTOMER' ? 'Guest/POS Order' : ''),
+                    phone: phone || (authUser?.role !== 'CUSTOMER' ? '0000000000' : ''),
                     paymentMethod,
                     items: cart.map(item => ({
                         productId: item.productId,
@@ -49,10 +51,10 @@ export default function CheckoutPage() {
                 }),
             });
 
-            if (!res.ok) throw new Error('Order failed');
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || data.details || 'Order failed');
 
-            const order = await res.json();
-            alert(`Order #${order.id} placed successfully!`);
+            alert(`Order #${data.id} placed successfully!`);
             clearCart();
             router.push('/');
         } catch (err: any) {
@@ -67,15 +69,15 @@ export default function CheckoutPage() {
             <h1 className="text-3xl font-bold mb-8 text-secondary">Checkout</h1>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
                 <form onSubmit={handleSubmit} className="bg-white p-8 rounded-2xl shadow-lg space-y-6">
-                    <h2 className="text-xl font-bold mb-4">Shipping Information</h2>
+                    <h2 className="text-xl font-bold mb-4">{authUser?.role === 'CUSTOMER' ? 'Shipping Information' : 'Customer Info (Guest/Manual)'}</h2>
                     <div>
                         <label className="block text-sm font-bold text-gray-700 mb-1">Full Address</label>
                         <textarea
                             value={address}
                             onChange={(e) => setAddress(e.target.value)}
-                            required
+                            required={authUser?.role === 'CUSTOMER'}
                             className="w-full border rounded-xl px-4 py-2"
-                            placeholder="Street, City, Area"
+                            placeholder={authUser?.role === 'CUSTOMER' ? "Street, City, Area" : "Optional for Guest"}
                         />
                     </div>
                     <div>
@@ -84,9 +86,9 @@ export default function CheckoutPage() {
                             type="text"
                             value={phone}
                             onChange={(e) => setPhone(e.target.value)}
-                            required
+                            required={authUser?.role === 'CUSTOMER'}
                             className="w-full border rounded-xl px-4 py-2"
-                            placeholder="01xxxxxxxxx"
+                            placeholder={authUser?.role === 'CUSTOMER' ? "01xxxxxxxxx" : "Optional for Guest"}
                         />
                     </div>
 
@@ -125,9 +127,9 @@ export default function CheckoutPage() {
                     <button
                         type="submit"
                         disabled={loading || cart.length === 0}
-                        className="w-full bg-secondary text-white font-black py-5 rounded-2xl shadow-xl shadow-secondary/30 mt-8 hover:bg-black transition-all uppercase tracking-widest text-xs border-2 border-white/20 active:scale-95"
+                        className="w-full bg-secondary text-black font-black py-5 rounded-2xl shadow-xl shadow-secondary/30 mt-8 hover:bg-black hover:text-white transition-all uppercase tracking-widest text-xs border-2 border-white/20 active:scale-95"
                     >
-                        {loading ? 'Processing...' : `Confirm Order (৳${cartTotal.toLocaleString()})`}
+                        {loading ? 'Processing...' : 'Complete Order'}
                     </button>
                 </form>
 

@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import Image from 'next/image';
 import { useCart } from '@/context/CartContext';
@@ -44,19 +46,19 @@ export default function ProductCard({ product }: ProductProps) {
       {/* Badges */}
       <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
         {isOutOfStock && (
-          <span className="bg-gray-800 text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase shadow-sm">Out of Stock</span>
+          <span className="bg-gray-800 text-black text-[10px] font-bold px-2 py-1 rounded-full uppercase shadow-sm">Out of Stock</span>
         )}
         {isLowStock && (
-          <span className="bg-amber-500 text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase shadow-sm">Low Stock ({stock} left)</span>
+          <span className="bg-amber-500 text-black text-[10px] font-bold px-2 py-1 rounded-full uppercase shadow-sm">Low Stock ({stock} left)</span>
         )}
         {product.isFeatured && (
-          <span className="bg-primary text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase shadow-sm">Featured</span>
+          <span className="bg-primary text-black text-[10px] font-bold px-2 py-1 rounded-full uppercase shadow-sm">Featured</span>
         )}
         {product.isNew && (
-          <span className="bg-green-500 text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase shadow-sm">New</span>
+          <span className="bg-green-500 text-black text-[10px] font-bold px-2 py-1 rounded-full uppercase shadow-sm">New</span>
         )}
         {product.discount && (
-          <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase shadow-sm">-{product.discount}%</span>
+          <span className="bg-red-500 text-black text-[10px] font-bold px-2 py-1 rounded-full uppercase shadow-sm">-{product.discount}%</span>
         )}
       </div>
 
@@ -101,8 +103,8 @@ export default function ProductCard({ product }: ProductProps) {
             onClick={handleAddToCart}
             disabled={isOutOfStock}
             className={`rounded-xl p-3 transition-all transform active:scale-95 shadow-sm ${isOutOfStock
-                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                : 'bg-gray-100 group-hover:bg-primary text-gray-400 group-hover:text-white'
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              : 'bg-gray-100 group-hover:bg-primary text-gray-400 group-hover:text-black'
               }`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

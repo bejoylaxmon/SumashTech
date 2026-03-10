@@ -60,7 +60,7 @@ export default function UserOrdersPage() {
                         </div>
                         <h2 className="text-2xl font-black text-secondary uppercase tracking-widest mb-4">No orders found</h2>
                         <p className="text-gray-400 mb-10 max-w-xs mx-auto text-sm font-medium">You haven't placed any orders yet. Start exploring our premium collection.</p>
-                        <a href="/" className="bg-primary text-white px-12 py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-primary/30 hover:bg-orange-600 transition-all border-2 border-white/20 active:scale-95">Start Shopping</a>
+                        <a href="/" className="bg-primary text-black px-12 py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-primary/30 hover:bg-orange-600 transition-all border-2 border-white/20 active:scale-95">Start Shopping</a>
                     </div>
                 ) : (
                     <div className="space-y-8">
@@ -103,10 +103,10 @@ export default function UserOrdersPage() {
                                     <div className="flex flex-col sm:flex-row justify-between items-center pt-8 border-t border-dashed border-gray-100 gap-6">
                                         <div className="flex items-center gap-3">
                                             <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Status:</span>
-                                            <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm ${order.status === 'DELIVERED' ? 'bg-green-500 text-white' :
-                                                order.status === 'CANCELLED' ? 'bg-red-500 text-white' :
-                                                    order.status === 'SHIPPED' ? 'bg-blue-500 text-white' :
-                                                        'bg-yellow-400 text-white'
+                                            <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-sm ${order.status === 'DELIVERED' ? 'bg-green-500 text-black' :
+                                                order.status === 'CANCELLED' ? 'bg-red-500 text-black' :
+                                                    order.status === 'SHIPPED' ? 'bg-blue-500 text-black' :
+                                                        'bg-yellow-400 text-black'
                                                 }`}>
                                                 {order.status}
                                             </span>

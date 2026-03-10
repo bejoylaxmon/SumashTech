@@ -76,7 +76,7 @@ export default function PopupOffer() {
                             <a
                                 href={popup.link}
                                 onClick={closePopup}
-                                className="bg-primary text-white font-bold py-4 px-8 rounded-xl hover:bg-primary/90 transition-all text-lg shadow-lg shadow-primary/20"
+                                className="bg-primary text-black font-bold py-4 px-8 rounded-xl hover:bg-primary/90 transition-all text-lg shadow-lg shadow-primary/20"
                             >
                                 Get Offer Now
                             </a>

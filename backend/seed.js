@@ -11,15 +11,18 @@ async function main() {
 
     // 1. Permissions
     const permissionsData = [
-        'manage_products',
-        'manage_categories',
-        'manage_brands',
-        'view_orders',
-        'manage_orders',
+        'view_shop', 'edit_shop',
+        'view_product_detail', 'edit_product_full', 'edit_product_stock', 'edit_product_content',
         'manage_users',
-        'view_reports',
-        'buy_products',
-        'view_own_orders',
+        'view_orders_all', 'create_orders_manual',
+        'view_financial_reports',
+        'manage_inventory',
+        'manage_coupons',
+        'manage_settings',
+        'buy_products', 'view_own_orders',
+        'verify_order_phone', 'verify_order_status',
+        'assign_courier', 'generate_invoice',
+        'delete_refund_order'
     ];
 
     const permissions = {};
@@ -39,19 +42,34 @@ async function main() {
         },
         {
             name: 'MANAGER',
-            permissions: ['manage_products', 'manage_categories', 'manage_brands', 'view_orders', 'manage_orders', 'view_reports'],
+            permissions: [
+                'view_shop', 'edit_shop',
+                'view_product_detail', 'edit_product_stock',
+                'view_orders_all', 'create_orders_manual',
+                'manage_inventory', 'manage_coupons',
+                'assign_courier', 'generate_invoice'
+            ],
         },
         {
             name: 'EDITOR',
-            permissions: ['manage_products', 'manage_categories', 'manage_brands'],
+            permissions: [
+                'view_shop', 'edit_shop',
+                'view_product_detail', 'edit_product_content',
+                'manage_inventory', 'manage_coupons'
+            ],
         },
         {
             name: 'SALES',
-            permissions: ['view_orders', 'manage_orders'],
+            permissions: [
+                'view_shop',
+                'view_product_detail',
+                'view_orders_all', 'create_orders_manual',
+                'verify_order_phone', 'verify_order_status'
+            ],
         },
         {
             name: 'CUSTOMER',
-            permissions: ['buy_products', 'view_own_orders'],
+            permissions: ['view_shop', 'view_product_detail', 'buy_products', 'view_own_orders'],
         },
     ];
 

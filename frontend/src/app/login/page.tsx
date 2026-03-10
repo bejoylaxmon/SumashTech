@@ -33,7 +33,14 @@ export default function LoginPage() {
             }
 
             login(data);
-            router.push('/');
+
+            // Role-based redirection
+            if (data.role === 'CUSTOMER') {
+                router.push('/');
+            } else {
+                router.push('/admin/orders');
+            }
+
             router.refresh();
         } catch (err: any) {
             setError(err.message);
@@ -89,7 +96,7 @@ export default function LoginPage() {
                         <button
                             type="submit"
                             disabled={loading}
-                            className={`group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-white bg-primary hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary shadow-lg shadow-primary/20 transition-all ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                            className={`group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-black bg-primary hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary shadow-lg shadow-primary/20 transition-all ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
                         >
                             {loading ? 'Signing in...' : 'Sign in'}
                         </button>

@@ -19,7 +19,7 @@ app.use(express.json());
 
 // Routes
 // Admin Middleware
-const checkPermission = (permission) => async (req, res, next) => {
+const checkPermission = (permissions) => async (req, res, next) => {
     try {
         const email = req.headers['x-user-email'];
         if (!email) return res.status(401).json({ error: 'Unauthorized' });
@@ -29,7 +29,14 @@ const checkPermission = (permission) => async (req, res, next) => {
             include: { role: { include: { permissions: true } } }
         });
 
-        if (!user || !user.role || !user.role.permissions.some(p => p.name === permission)) {
+        if (!user || !user.role) {
+            return res.status(403).json({ error: 'Forbidden: Insufficient permissions' });
+        }
+
+        const requiredPermissions = Array.isArray(permissions) ? permissions : [permissions];
+        const hasPermission = user.role.permissions.some(p => requiredPermissions.includes(p.name));
+
+        if (!hasPermission) {
             return res.status(403).json({ error: 'Forbidden: Insufficient permissions' });
         }
         next();
@@ -99,12 +106,39 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 // Update Product (Admin)
-app.put('/api/products/:id', checkPermission('manage_products'), async (req, res) => {
+// Update Product (Admin)
+app.put('/api/products/:id', checkPermission(['edit_product_full', 'edit_product_stock', 'edit_product_content']), async (req, res) => {
     try {
+        const email = req.headers['x-user-email'];
+        const user = await prisma.user.findUnique({
+            where: { email },
+            include: { role: { include: { permissions: true } } }
+        });
+
+        const perms = user.role.permissions.map(p => p.name);
+        const isAdmin = perms.includes('edit_product_full');
+        const isManager = perms.includes('edit_product_stock');
+        const isEditor = perms.includes('edit_product_content');
+
+        const allowedData = {};
         const { name, slug, description, price, discount, stock, images, categoryId, brandId, isFeatured, isNew } = req.body;
+
+        if (isAdmin) {
+            Object.assign(allowedData, { name, slug, description, price, discount, stock, images, categoryId, brandId, isFeatured, isNew });
+        } else {
+            if (isEditor) {
+                // Editor can edit content and pricing (as per matrix)
+                Object.assign(allowedData, { name, slug, description, price, discount, images, categoryId, brandId, isFeatured, isNew });
+            }
+            if (isManager) {
+                // Manager can edit stock and coupons (in this route just stock)
+                Object.assign(allowedData, { stock });
+            }
+        }
+
         const product = await prisma.product.update({
             where: { id: parseInt(req.params.id) },
-            data: { name, slug, description, price, discount, stock, images, categoryId, brandId, isFeatured, isNew }
+            data: allowedData
         });
         res.json(product);
     } catch (err) {
@@ -205,7 +239,7 @@ app.get('/api/categories', async (req, res) => {
 
 // Products
 // Create Category (Admin)
-app.post('/api/categories', checkPermission('manage_categories'), async (req, res) => {
+app.post('/api/categories', checkPermission(['edit_product_full', 'manage_inventory', 'edit_product_content']), async (req, res) => {
     try {
         const category = await prisma.category.create({ data: req.body });
         res.status(201).json(category);
@@ -230,7 +264,7 @@ app.get('/api/categories/:id', async (req, res) => {
 });
 
 // Update Category (Admin)
-app.put('/api/categories/:id', checkPermission('manage_categories'), async (req, res) => {
+app.put('/api/categories/:id', checkPermission(['edit_product_full', 'manage_inventory', 'edit_product_content']), async (req, res) => {
     try {
         const category = await prisma.category.update({
             where: { id: parseInt(req.params.id) },
@@ -244,7 +278,7 @@ app.put('/api/categories/:id', checkPermission('manage_categories'), async (req,
 });
 
 // Create Product (Admin)
-app.post('/api/products', checkPermission('manage_products'), async (req, res) => {
+app.post('/api/products', checkPermission(['edit_product_full', 'manage_inventory']), async (req, res) => {
     try {
         const { name, slug, description, price, discount, stock, images, categoryId, brandId, isFeatured, isNew } = req.body;
         const product = await prisma.product.create({
@@ -259,11 +293,17 @@ app.post('/api/products', checkPermission('manage_products'), async (req, res) =
 
 app.get('/api/products', async (req, res) => {
     try {
-        const { category, isFeatured, isNew } = req.query;
+        const { category, isFeatured, isNew, search } = req.query;
         const filter = {};
         if (category) filter.category = { slug: category };
         if (isFeatured === 'true') filter.isFeatured = true;
         if (isNew === 'true') filter.isNew = true;
+        if (search) {
+            filter.name = {
+                contains: search,
+                mode: 'insensitive'
+            };
+        }
 
         const products = await prisma.product.findMany({
             where: filter,
@@ -338,7 +378,7 @@ app.patch('/api/promotions/popup/:id', checkPermission('manage_products'), async
 });
 
 // Toggle Featured Status (Admin)
-app.patch('/api/products/:id/featured', checkPermission('manage_products'), async (req, res) => {
+app.patch('/api/products/:id/featured', checkPermission(['edit_product_full', 'edit_product_content']), async (req, res) => {
     try {
         const product = await prisma.product.update({
             where: { id: parseInt(req.params.id) },
@@ -350,11 +390,28 @@ app.patch('/api/products/:id/featured', checkPermission('manage_products'), asyn
     }
 });
 
+// Delete Product (Admin)
+app.delete('/api/products/:id', checkPermission(['edit_product_full', 'manage_inventory']), async (req, res) => {
+    try {
+        await prisma.product.delete({
+            where: { id: parseInt(req.params.id) }
+        });
+        res.json({ success: true });
+    } catch (err) {
+        res.status(404).json({ error: 'Product not found' });
+    }
+});
+
 // Admin: Get All Orders
-app.get('/api/admin/orders', checkPermission('view_orders'), async (req, res) => {
+app.get('/api/admin/orders', checkPermission('view_orders_all'), async (req, res) => {
     try {
         const orders = await prisma.order.findMany({
-            include: { user: { select: { name: true, email: true } }, items: { include: { product: true } } },
+            include: {
+                user: { select: { name: true, email: true } },
+                items: { include: { product: true } },
+                verifiedBy: { select: { name: true } },
+                shippedBy: { select: { name: true } }
+            },
             orderBy: { createdAt: 'desc' }
         });
         res.json(orders);
@@ -365,16 +422,63 @@ app.get('/api/admin/orders', checkPermission('view_orders'), async (req, res) =>
 });
 
 // Admin: Update Order Status
-app.patch('/api/admin/orders/:id', checkPermission('manage_orders'), async (req, res) => {
+app.patch('/api/admin/orders/:id', checkPermission(['assign_courier', 'generate_invoice', 'verify_order_status', 'delete_refund_order']), async (req, res) => {
     try {
-        const order = await prisma.order.update({
-            where: { id: parseInt(req.params.id) },
-            data: { status: req.body.status }
+        const email = req.headers['x-user-email'];
+        const user = await prisma.user.findUnique({
+            where: { email },
+            include: { role: { include: { permissions: true } } }
         });
-        res.json(order);
+
+        const perms = user.role.permissions.map(p => p.name);
+        const isAdmin = perms.includes('delete_refund_order');
+        const isManager = perms.includes('assign_courier') || perms.includes('generate_invoice');
+        const isSales = perms.includes('verify_order_status');
+
+        const allowedData = {};
+        const { status, courierName, trackingNumber, invoiceUrl } = req.body;
+
+        if (isAdmin) {
+            Object.assign(allowedData, { status, courierName, trackingNumber, invoiceUrl });
+        } else {
+            if (isSales) {
+                if (status === 'VERIFIED') {
+                    allowedData.status = 'VERIFIED';
+                    allowedData.verifiedById = user.id;
+                }
+                if (status === 'DELIVERED') {
+                    allowedData.status = 'DELIVERED';
+                }
+            }
+            if (isManager) {
+                if (status) {
+                    allowedData.status = status;
+                    if (status === 'SHIPPED') allowedData.shippedById = user.id;
+                    if (status === 'DELIVERED') allowedData.status = 'DELIVERED';
+                }
+                if (courierName) allowedData.courierName = courierName;
+                if (trackingNumber) allowedData.trackingNumber = trackingNumber;
+                if (invoiceUrl) allowedData.invoiceUrl = invoiceUrl;
+            }
+        }
+
+        if (isAdmin && status === 'CANCELLED') {
+            allowedData.refundedById = user.id;
+        }
+
+        const updatedOrder = await prisma.order.update({
+            where: { id: parseInt(req.params.id) },
+            data: allowedData
+        });
+
+        if (status === 'DELIVERED') {
+            console.log(`[SMS] To ${updatedOrder.phone}: Thank you for shopping with Sumash Tech! Your warranty for the products in order #${updatedOrder.id} starts today.`);
+        }
+
+        res.json(updatedOrder);
     } catch (err) {
         console.error('Order status update error:', err);
-        res.status(500).json({ error: 'Failed to update order status' });
+        res.status(500).json({ error: 'Failed to update order' });
     }
 });
 
@@ -416,10 +520,17 @@ app.get('/api/admin/roles', checkPermission('manage_users'), async (req, res) =>
 });
 
 // Admin: Reports
-app.get('/api/admin/reports/sales', checkPermission('view_reports'), async (req, res) => {
+app.get('/api/admin/reports/sales', checkPermission('view_financial_reports'), async (req, res) => {
     try {
         const allOrders = await prisma.order.findMany({
-            select: { total: true, createdAt: true, status: true }
+            include: {
+                user: { select: { name: true, email: true } },
+                items: { include: { product: true } },
+                verifiedBy: { select: { name: true } },
+                shippedBy: { select: { name: true } },
+                refundedBy: { select: { name: true } }
+            },
+            orderBy: { createdAt: 'desc' }
         });
 
         const deliveredOrders = allOrders.filter(o => o.status === 'DELIVERED');
@@ -430,12 +541,24 @@ app.get('/api/admin/reports/sales', checkPermission('view_reports'), async (req,
             return acc;
         }, {});
 
+        // Add Audit details to the last 10 orders for step 5 monitoring
+        const recentOrdersWithAudit = allOrders.slice(0, 10).map(o => ({
+            id: o.id,
+            customer: o.user.name,
+            total: o.total,
+            status: o.status,
+            verifiedBy: o.verifiedBy?.name || 'Pending',
+            shippedBy: o.shippedBy?.name || 'Pending',
+            refundedBy: o.refundedBy?.name || 'N/A',
+            createdAt: o.createdAt
+        }));
+
         res.json({
             totalSales,
             orderCount: allOrders.length,
             deliveredCount: deliveredOrders.length,
             statusCounts,
-            orders: deliveredOrders.slice(0, 5) // Show last 5 delivered
+            recentOrders: recentOrdersWithAudit
         });
     } catch (err) {
         console.error('Sales report error:', err);
@@ -465,26 +588,68 @@ app.get('/api/orders/user/:email', async (req, res) => {
 app.post('/api/orders', async (req, res) => {
     try {
         const { userId, total, items, address, phone, paymentMethod } = req.body;
-        const order = await prisma.order.create({
-            data: {
-                userId: parseInt(userId),
-                total,
-                address,
-                phone,
-                paymentMethod,
-                items: {
-                    create: items.map(item => ({
-                        productId: item.productId,
-                        quantity: item.quantity,
-                        price: item.price
-                    }))
-                }
-            }
+
+        if (!userId || isNaN(parseInt(userId))) {
+            return res.status(400).json({ error: 'Invalid user ID' });
+        }
+
+        // Check if user exists before attempting to create order
+        const userExists = await prisma.user.findUnique({
+            where: { id: parseInt(userId) }
         });
-        res.json(order);
+
+        if (!userExists) {
+            return res.status(404).json({ error: 'User not found. Please log in again.' });
+        }
+
+        // Transaction to ensure both order creation and stock reduction succeed
+        const result = await prisma.$transaction(async (tx) => {
+            // 1. Create the order
+            const order = await tx.order.create({
+                data: {
+                    userId: parseInt(userId),
+                    total: parseFloat(total),
+                    address,
+                    phone,
+                    paymentMethod,
+                    items: {
+                        create: items.map(item => ({
+                            productId: parseInt(item.productId),
+                            quantity: parseInt(item.quantity),
+                            price: parseFloat(item.price)
+                        }))
+                    }
+                },
+                include: { items: true }
+            });
+
+            // 2. Reduce stock for each product
+            for (const item of items) {
+                const product = await tx.product.findUnique({ where: { id: parseInt(item.productId) } });
+                if (!product || product.stock < parseInt(item.quantity)) {
+                    throw new Error(`Insufficient stock for product: ${product?.name || item.productId}`);
+                }
+
+                await tx.product.update({
+                    where: { id: parseInt(item.productId) },
+                    data: { stock: { decrement: parseInt(item.quantity) } }
+                });
+            }
+
+            return order;
+        });
+
+        // 3. Simulated Notification (Step 1)
+        console.log(`[step 1] NOTIFICATION: Order #${result.id} placed by user ${result.userId}. Sending confirmation Email/SMS to customer...`);
+
+        res.json(result);
     } catch (err) {
         console.error('Order creation error:', err);
-        res.status(500).json({ error: 'Failed to create order', details: err.message });
+        res.status(500).json({
+            error: 'Failed to create order',
+            details: err.message,
+            code: err.code // Prisma error codes
+        });
     }
 });
 

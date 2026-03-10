@@ -1,37 +1,13 @@
 import ProductList from "@/components/ProductList";
+import HeroSlider from "@/components/HeroSlider";
 import Link from "next/link";
 
 export default function Home() {
   return (
-    <div className="bg-gray-50 pb-20">
-      {/* Hero Section */}
+    <div className="bg-gray-50 pb-20 font-sans">
+      {/* Hero Slider Section */}
       <section className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Main Banner */}
-          <div className="lg:col-span-3 rounded-2xl overflow-hidden shadow-lg relative h-[300px] md:h-[450px] bg-gradient-to-br from-secondary to-gray-800 flex items-center justify-center">
-            <div className="text-center px-6">
-              <h1 className="text-white text-3xl md:text-5xl font-bold mb-4">iPhone 16 Pro Max</h1>
-              <p className="text-gray-300 mb-8 max-w-md mx-auto">Experience the ultimate Apple innovation. Available now at Sumash Tech with best price.</p>
-              <Link href="/category/smartphone-iphone" className="inline-block bg-primary text-white font-bold px-8 py-3 rounded-full hover:bg-orange-600 transition-colors shadow-lg">Shop Now</Link>
-            </div>
-            {/* Pattern/Decoration */}
-            <div className="absolute top-10 right-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl opacity-50"></div>
-            <div className="absolute bottom-10 left-10 w-32 h-32 bg-white/5 rounded-full blur-3xl opacity-50"></div>
-          </div>
-          {/* Side Banners */}
-          <div className="hidden lg:flex flex-col gap-6">
-            <div className="flex-1 rounded-2xl overflow-hidden shadow-md bg-gradient-to-r from-orange-500 to-primary p-6 flex flex-col justify-center">
-              <span className="text-white/80 text-xs font-bold uppercase mb-1">New Arrival</span>
-              <h3 className="text-white font-bold text-xl mb-3">MacBook Air M3</h3>
-              <Link href="/category/mac" className="w-fit bg-secondary text-white text-xs font-bold px-4 py-2 rounded-full hover:bg-black transition-colors">Explore</Link>
-            </div>
-            <div className="flex-1 rounded-2xl overflow-hidden shadow-md bg-white border border-gray-100 p-6 flex flex-col justify-center">
-              <span className="text-primary text-xs font-bold uppercase mb-1">Weekly Sale</span>
-              <h3 className="text-secondary font-bold text-xl mb-3">Save up to 30%</h3>
-              <Link href="/deals" className="w-fit bg-primary text-white text-xs font-bold px-4 py-2 rounded-full hover:bg-orange-600 transition-colors">View Deals</Link>
-            </div>
-          </div>
-        </div>
+        <HeroSlider />
       </section>
 
       {/* Popular Categories */}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { API_BASE } from '@/lib/api';
@@ -32,23 +32,28 @@ export default function AdminProductsPage() {
         fetchProducts();
     }, []);
 
-    const deleteProduct = async (id: number) => {
+    const deleteProduct = useCallback(async (id: number) => {
         if (!confirm('Are you sure you want to delete this product?')) return;
 
         try {
-            const res = await fetch(`${API_BASE}/api/products/${id}`, {
+            const res = await fetch(`/api/products/${id}`, {
                 method: 'DELETE',
                 headers: { 'x-user-email': user?.email || '' }
             });
             if (res.ok) {
-                setProducts(products.filter(p => p.id !== id));
+                setProducts(prev => prev.filter(p => p.id !== id));
             } else {
-                alert('Failed to delete product');
+                const data = await res.json();
+                alert(data.error || 'Failed to delete product');
             }
         } catch (err) {
             alert('Error deleting product');
         }
-    };
+    }, [user]);
+
+    const canAdd = useMemo(() => user?.permissions?.includes('edit_product_full') || user?.role === 'SUPER_ADMIN', [user]);
+    const canEdit = useMemo(() => user?.permissions?.includes('edit_product_full') || user?.permissions?.includes('edit_product_content') || user?.permissions?.includes('edit_product_stock') || user?.role === 'SUPER_ADMIN', [user]);
+    const canDelete = useMemo(() => user?.permissions?.includes('edit_product_full') || user?.role === 'SUPER_ADMIN', [user]);
 
     if (loading) return <div className="p-10 text-center text-secondary font-bold">Loading Products...</div>;
 
@@ -56,9 +61,11 @@ export default function AdminProductsPage() {
         <div className="container mx-auto px-4 py-12">
             <div className="flex justify-between items-center mb-8">
                 <h1 className="text-3xl font-bold text-secondary">Manage Products</h1>
-                <Link href="/admin/products/add" className="bg-primary text-white px-8 py-3 rounded-2xl font-black uppercase tracking-widest text-xs shadow-2xl shadow-primary/40 hover:bg-orange-600 transition-all border-2 border-white/20">
-                    + Add Product Now
-                </Link>
+                {canAdd && (
+                    <Link href="/admin/products/add" className="bg-primary text-black px-8 py-3 rounded-2xl font-black uppercase tracking-widest text-xs shadow-2xl shadow-primary/40 hover:bg-orange-600 transition-all border-2 border-white/20">
+                        + Add Product Now
+                    </Link>
+                )}
             </div>
 
             {error && <div className="text-red-500 mb-4">{error}</div>}
@@ -71,7 +78,7 @@ export default function AdminProductsPage() {
                             <th className="px-6 py-4 text-sm font-bold text-gray-700">Category</th>
                             <th className="px-6 py-4 text-sm font-bold text-gray-700">Price</th>
                             <th className="px-6 py-4 text-sm font-bold text-gray-700">Stock</th>
-                            <th className="px-6 py-4 text-sm font-bold text-gray-700 text-right">Actions</th>
+                            {(canEdit || canDelete) && <th className="px-6 py-4 text-sm font-bold text-gray-700 text-right">Actions</th>}
                         </tr>
                     </thead>
                     <tbody className="divide-y">
@@ -88,16 +95,22 @@ export default function AdminProductsPage() {
                                         {product.stock} in stock
                                     </span>
                                 </td>
-                                <td className="px-6 py-4 text-right">
-                                    <div className="flex justify-end gap-3 min-w-max">
-                                        <Link href={`/admin/products/edit/${product.id}`} className="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-600/30 transition-all border-2 border-white/10">
-                                            Edit
-                                        </Link>
-                                        <button onClick={() => deleteProduct(product.id)} className="bg-red-500 text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 shadow-lg shadow-red-500/30 transition-all border-2 border-white/10">
-                                            Delete
-                                        </button>
-                                    </div>
-                                </td>
+                                {(canEdit || canDelete) && (
+                                    <td className="px-6 py-4 text-right">
+                                        <div className="flex justify-end gap-3 min-w-max">
+                                            {canEdit && (
+                                                <Link href={`/admin/products/edit/${product.id}`} className="bg-blue-600 text-black px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 shadow-lg shadow-blue-600/30 transition-all border-2 border-white/10">
+                                                    Edit
+                                                </Link>
+                                            )}
+                                            {canDelete && (
+                                                <button onClick={() => deleteProduct(product.id)} className="bg-red-500 text-black px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 shadow-lg shadow-red-500/30 transition-all border-2 border-white/10">
+                                                    Delete
+                                                </button>
+                                            )}
+                                        </div>
+                                    </td>
+                                )}
                             </tr>
                         ))}
                     </tbody>

@@ -47,6 +47,8 @@ export default function AdminUsersPage() {
         }
     };
 
+    const canManageRoles = currentUser?.permissions?.includes('manage_users') || currentUser?.role === 'SUPER_ADMIN';
+
     if (loading) return <div className="p-10 text-center font-bold">Loading Users...</div>;
 
     return (
@@ -59,7 +61,7 @@ export default function AdminUsersPage() {
                             <th className="px-6 py-4 text-sm font-bold text-gray-700">Name</th>
                             <th className="px-6 py-4 text-sm font-bold text-gray-700">Email</th>
                             <th className="px-6 py-4 text-sm font-bold text-gray-700">Current Role</th>
-                            <th className="px-6 py-4 text-sm font-bold text-gray-700">Change Role</th>
+                            {canManageRoles && <th className="px-6 py-4 text-sm font-bold text-gray-700">Change Role</th>}
                         </tr>
                     </thead>
                     <tbody className="divide-y space-y-4">
@@ -82,21 +84,23 @@ export default function AdminUsersPage() {
                                         {u.role?.name}
                                     </span>
                                 </td>
-                                <td className="px-6 py-4">
-                                    <div className="flex items-center gap-2">
-                                        <select
-                                            value={u.roleId}
-                                            onChange={(e) => updateRole(u.id, parseInt(e.target.value))}
-                                            className="border-2 border-gray-100 rounded-lg px-3 py-2 text-xs font-bold outline-none focus:border-primary transition-all bg-white"
-                                            disabled={u.email === currentUser?.email}
-                                        >
-                                            {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
-                                        </select>
-                                        {u.email === currentUser?.email && (
-                                            <span className="text-[10px] text-gray-400 font-bold italic">(You)</span>
-                                        )}
-                                    </div>
-                                </td>
+                                {canManageRoles && (
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-2">
+                                            <select
+                                                value={u.roleId}
+                                                onChange={(e) => updateRole(u.id, parseInt(e.target.value))}
+                                                className="border-2 border-gray-100 rounded-lg px-3 py-2 text-xs font-bold outline-none focus:border-primary transition-all bg-white"
+                                                disabled={u.email === currentUser?.email}
+                                            >
+                                                {roles.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                                            </select>
+                                            {u.email === currentUser?.email && (
+                                                <span className="text-[10px] text-gray-400 font-bold italic">(You)</span>
+                                            )}
+                                        </div>
+                                    </td>
+                                )}
                             </tr>
                         ))}
                     </tbody>

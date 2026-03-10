@@ -16,6 +16,7 @@ export default function EditProductPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
+    const [userPerms, setUserPerms] = useState<string[]>([]);
     const router = useRouter();
     const params = useParams();
 
@@ -37,6 +38,9 @@ export default function EditProductPage() {
                 setImages(product.images && product.images.length > 0 ? product.images : ['']);
                 setCategoryId(product.categoryId.toString());
                 setCategories(cats);
+
+                const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+                setUserPerms(storedUser.permissions || []);
             } catch (err) {
                 setError('Failed to load product data');
             } finally {
@@ -45,6 +49,10 @@ export default function EditProductPage() {
         };
         fetchData();
     }, [params.id]);
+
+    const isAdmin = userPerms.includes('edit_product_full') || userPerms.length === 0; // Length 0 fallback for backward compatibility if needed
+    const canEditContent = isAdmin || userPerms.includes('edit_product_content');
+    const canEditStock = isAdmin || userPerms.includes('edit_product_stock');
 
     const addImageField = () => setImages([...images, '']);
     const updateImage = (index: number, val: string) => {
@@ -96,26 +104,41 @@ export default function EditProductPage() {
                 <div>
                     <label className="block text-xs font-black text-gray-400 mb-2 uppercase tracking-widest">Product Name</label>
                     <input type="text" value={name} onChange={(e) => setName(e.target.value)} required
-                        className="w-full border-2 border-gray-100 rounded-2xl px-5 py-3.5 focus:border-primary transition-all font-bold text-secondary" />
+                        disabled={!canEditContent}
+                        className={`w-full border-2 border-gray-100 rounded-2xl px-5 py-3.5 focus:border-primary transition-all font-bold text-secondary ${!canEditContent ? 'bg-gray-50 opacity-60 cursor-not-allowed' : ''}`} />
                 </div>
 
                 <div className="grid grid-cols-2 gap-6">
                     <div>
                         <label className="block text-xs font-black text-gray-400 mb-2 uppercase tracking-widest">Price (৳)</label>
                         <input type="number" value={price} onChange={(e) => setPrice(e.target.value)} required
-                            className="w-full border-2 border-gray-100 rounded-2xl px-5 py-3.5 focus:border-primary transition-all font-bold text-primary" />
+                            disabled={!canEditContent}
+                            className={`w-full border-2 border-gray-100 rounded-2xl px-5 py-3.5 focus:border-primary transition-all font-bold text-primary ${!canEditContent ? 'bg-gray-50 opacity-60 cursor-not-allowed' : ''}`} />
                     </div>
                     <div>
-                        <label className="block text-xs font-black text-gray-400 mb-2 uppercase tracking-widest">Stock</label>
+                        <label className="block text-xs font-black text-gray-400 mb-2 uppercase tracking-widest flex justify-between items-center">
+                            Stock
+                            {parseInt(stock) < 10 && <span className="text-[8px] bg-red-500 text-black px-2 py-0.5 rounded-full animate-pulse">Low Stock</span>}
+                        </label>
                         <input type="number" value={stock} onChange={(e) => setStock(e.target.value)} required
-                            className="w-full border-2 border-gray-100 rounded-2xl px-5 py-3.5 focus:border-primary transition-all font-bold text-secondary" />
+                            disabled={!canEditStock}
+                            className={`w-full border-2 border-gray-100 rounded-2xl px-5 py-3.5 focus:border-primary transition-all font-bold text-secondary ${!canEditStock ? 'bg-gray-50 opacity-60 cursor-not-allowed' : ''}`} />
                     </div>
+                </div>
+
+                <div>
+                    <label className="block text-xs font-black text-gray-400 mb-2 uppercase tracking-widest">Description</label>
+                    <textarea value={description} onChange={(e) => setDescription(e.target.value)}
+                        disabled={!canEditContent}
+                        className={`w-full border-2 border-gray-100 rounded-2xl px-5 py-3.5 focus:border-primary transition-all font-bold text-secondary h-32 ${!canEditContent ? 'bg-gray-50 opacity-60 cursor-not-allowed' : ''}`}
+                        placeholder="Detail product features and tags..." />
                 </div>
 
                 <div>
                     <label className="block text-xs font-black text-gray-400 mb-2 uppercase tracking-widest">Category</label>
                     <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} required
-                        className="w-full border-2 border-gray-100 rounded-2xl px-5 py-3.5 focus:border-primary transition-all font-bold text-secondary appearance-none">
+                        disabled={!canEditContent}
+                        className={`w-full border-2 border-gray-100 rounded-2xl px-5 py-3.5 focus:border-primary transition-all font-bold text-secondary appearance-none ${!canEditContent ? 'bg-gray-50 opacity-60 cursor-not-allowed' : ''}`}>
                         <option value="">Select Category</option>
                         {categories.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
                     </select>
@@ -130,17 +153,20 @@ export default function EditProductPage() {
                                 type="text"
                                 value={img}
                                 onChange={(e) => updateImage(idx, e.target.value)}
-                                className="w-full border-2 border-gray-100 rounded-2xl px-5 py-3 focus:border-primary transition-all text-sm font-medium"
+                                disabled={!canEditContent}
+                                className={`w-full border-2 border-gray-100 rounded-2xl px-5 py-3 focus:border-primary transition-all text-sm font-medium ${!canEditContent ? 'bg-gray-50 opacity-60 cursor-not-allowed' : ''}`}
                             />
                         ))}
                     </div>
-                    <button type="button" onClick={addImageField} className="mt-3 text-[10px] font-black text-primary uppercase tracking-[0.2em] hover:opacity-70 transition-opacity">
-                        + Add More Images
-                    </button>
+                    {canEditContent && (
+                        <button type="button" onClick={addImageField} className="mt-3 text-[10px] font-black text-primary uppercase tracking-[0.2em] hover:opacity-70 transition-opacity">
+                            + Add More Images
+                        </button>
+                    )}
                 </div>
 
                 <button type="submit" disabled={saving}
-                    className="w-full bg-secondary text-white font-black py-5 rounded-[2rem] shadow-2xl shadow-secondary/40 hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-[0.2em] text-sm mt-8 border border-white/10">
+                    className="w-full bg-secondary text-black font-black py-5 rounded-[2rem] shadow-2xl shadow-secondary/40 hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-[0.2em] text-sm mt-8 border border-white/10">
                     {saving ? 'Saving Changes...' : 'Update Product Now'}
                 </button>
             </form>

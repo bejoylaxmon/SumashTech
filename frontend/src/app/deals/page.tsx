@@ -73,8 +73,8 @@ export default function DealsPage() {
                         <div className="text-6xl mb-6">🏷️</div>
                         <h2 className="text-2xl font-black text-secondary uppercase tracking-widest mb-4">No Deals Right Now</h2>
                         <p className="text-gray-400 mb-8 max-w-sm mx-auto text-sm">Check back soon for amazing deals and discounts on premium tech products.</p>
-                        <Link href="/" className="bg-primary text-white px-10 py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-primary/30 hover:bg-orange-600 transition-all">
-                            Browse Products
+                        <Link href="/" className="bg-primary text-black px-10 py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-primary/30 hover:bg-orange-600 transition-all">
+                            Start Shopping
                         </Link>
                     </div>
                 ) : (

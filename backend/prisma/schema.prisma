@@ -20,6 +20,11 @@ model User {
   roleId    Int?
   role      Role?    @relation(fields: [roleId], references: [id])
   orders    Order[]
+  
+  verifiedOrders Order[]     @relation("VerifiedOrders")
+  shippedOrders  Order[]     @relation("ShippedOrders")
+  refundedOrders Order[]     @relation("RefundedOrders")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -93,6 +98,18 @@ model Order {
   paymentMethod String      @default("COD") // COD, BKASH
   address       String?
   phone         String?
+  courierName    String?
+  trackingNumber String?
+  invoiceUrl     String?
+  
+  verifiedById   Int?
+  shippedById    Int?
+  refundedById   Int?
+
+  verifiedBy     User?       @relation("VerifiedOrders", fields: [verifiedById], references: [id])
+  shippedBy      User?       @relation("ShippedOrders", fields: [shippedById], references: [id])
+  refundedBy     User?       @relation("RefundedOrders", fields: [refundedById], references: [id])
+
   items         OrderItem[]
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt

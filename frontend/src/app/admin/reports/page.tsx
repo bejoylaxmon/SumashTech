@@ -23,7 +23,18 @@ export default function AdminReportsPage() {
         if (user) fetchReport();
     }, [user]);
 
-    if (loading) return <div className="p-10 text-center font-bold">Loading Reports...</div>;
+    const canViewReports = user?.permissions?.includes('view_financial_reports') || user?.role === 'SUPER_ADMIN';
+
+    if (loading) return <div className="p-10 text-center font-bold text-secondary uppercase tracking-widest">Loading Reports...</div>;
+
+    if (!canViewReports) {
+        return (
+            <div className="p-20 text-center">
+                <h1 className="text-2xl font-black text-red-500 uppercase mb-4">Access Denied</h1>
+                <p className="text-gray-500 font-bold">You do not have permission to view financial reports.</p>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-gray-50 min-h-screen py-12">
@@ -75,22 +86,41 @@ export default function AdminReportsPage() {
                     <div className="lg:col-span-2 bg-white rounded-[40px] shadow-2xl shadow-gray-200/60 border border-gray-100 p-10">
                         <h3 className="text-xl font-black text-secondary uppercase tracking-widest flex items-center gap-3 mb-10">
                             <span className="w-1.5 h-6 bg-green-500 rounded-full"></span>
-                            Recent Settled Sales
+                            Audit Trail & Operations
                         </h3>
                         <div className="space-y-6">
-                            {report?.orders?.length > 0 ? report.orders.map((o: any, i: number) => (
-                                <div key={i} className="flex justify-between items-center p-6 bg-gray-50 rounded-2xl hover:bg-gray-100/50 transition-colors border border-transparent hover:border-gray-200 group">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center font-black text-gray-400 group-hover:text-primary transition-colors shadow-sm">#{i + 1}</div>
-                                        <div>
-                                            <p className="font-black text-secondary group-hover:translate-x-1 transition-transform">Transaction Recorded</p>
-                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{new Date(o.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                            {report?.recentOrders?.length > 0 ? report.recentOrders.map((o: any, i: number) => (
+                                <div key={i} className="flex flex-col p-6 bg-gray-50 rounded-2xl hover:bg-gray-100/50 transition-colors border border-transparent hover:border-gray-200 group">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center font-black text-primary shadow-sm">#{o.id}</div>
+                                            <div>
+                                                <p className="font-black text-secondary uppercase text-xs">{o.customer}</p>
+                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{new Date(o.createdAt).toLocaleString()}</p>
+                                            </div>
+                                        </div>
+                                        <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${o.status === 'DELIVERED' ? 'bg-green-500 text-black' :
+                                            o.status === 'CANCELLED' ? 'bg-red-500 text-black' :
+                                                'bg-blue-500 text-black'
+                                            }`}>{o.status}</span>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-200/50">
+                                        <div className="flex flex-col">
+                                            <span className="text-[8px] font-black text-gray-400 uppercase">Verified By</span>
+                                            <span className="text-[10px] font-bold text-secondary">{o.verifiedBy}</span>
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-[8px] font-black text-gray-400 uppercase">Shipped By</span>
+                                            <span className="text-[10px] font-bold text-secondary">{o.shippedBy}</span>
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-[8px] font-black text-gray-400 uppercase">Revenue</span>
+                                            <span className="text-[10px] font-black text-primary">৳{o.total.toLocaleString()}</span>
                                         </div>
                                     </div>
-                                    <span className="text-xl font-black text-primary">৳{o.total.toLocaleString()}</span>
                                 </div>
                             )) : (
-                                <div className="text-center py-10 text-gray-400 font-black uppercase text-xs tracking-widest">No settled sales yet</div>
+                                <div className="text-center py-10 text-gray-400 font-black uppercase text-xs tracking-widest">No recent operations recorded</div>
                             )}
                         </div>
                     </div>
@@ -103,9 +133,9 @@ export default function AdminReportsPage() {
                         <div className="space-y-4">
                             {report?.statusCounts && Object.entries(report.statusCounts).map(([status, count]: [string, any]) => (
                                 <div key={status} className="flex justify-between items-center p-5 bg-gray-50 rounded-2xl border border-gray-100">
-                                    <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${status === 'DELIVERED' ? 'bg-green-500 text-white' :
-                                        status === 'CANCELLED' ? 'bg-red-500 text-white' :
-                                            'bg-blue-500 text-white'
+                                    <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${status === 'DELIVERED' ? 'bg-green-500 text-black' :
+                                        status === 'CANCELLED' ? 'bg-red-500 text-black' :
+                                            'bg-blue-500 text-black'
                                         }`}>{status}</span>
                                     <span className="font-black text-secondary text-xl font-mono">{count}</span>
                                 </div>

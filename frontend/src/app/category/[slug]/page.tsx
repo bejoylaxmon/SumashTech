@@ -80,8 +80,8 @@ export default function CategoryPage() {
                         <div className="text-6xl mb-6">📦</div>
                         <h2 className="text-2xl font-black text-secondary uppercase tracking-widest mb-4">No Products Found</h2>
                         <p className="text-gray-400 mb-8 max-w-sm mx-auto text-sm">We don't have products in this category yet. Check back soon!</p>
-                        <Link href="/" className="bg-primary text-white px-10 py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-primary/30 hover:bg-orange-600 transition-all">
-                            Back to Home
+                        <Link href="/" className="bg-primary text-black px-10 py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-primary/30 hover:bg-orange-600 transition-all">
+                            Start Shopping
                         </Link>
                     </div>
                 ) : (

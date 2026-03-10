@@ -48,15 +48,19 @@ export default function AdminCategoriesPage() {
         }
     };
 
+    const canManage = user?.permissions?.includes('manage_inventory') || user?.permissions?.includes('manage_coupons') || user?.role === 'SUPER_ADMIN';
+
     if (loading) return <div className="p-10 text-center font-bold">Loading Categories...</div>;
 
     return (
         <div className="container mx-auto px-4 py-12">
             <div className="flex justify-between items-center mb-8">
                 <h1 className="text-3xl font-bold text-secondary">Manage Categories</h1>
-                <Link href="/admin/categories/add" className="bg-primary text-white px-8 py-3 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl shadow-primary/30 hover:bg-orange-600 transition-all border-2 border-white/20">
-                    + Add Category Now
-                </Link>
+                {canManage && (
+                    <Link href="/admin/categories/add" className="bg-primary text-black px-8 py-3 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl shadow-primary/30 hover:bg-orange-600 transition-all border-2 border-white/20">
+                        + Add Category Now
+                    </Link>
+                )}
             </div>
 
             {error && <div className="text-red-500 mb-4">{error}</div>}
@@ -67,7 +71,7 @@ export default function AdminCategoriesPage() {
                         <tr>
                             <th className="px-6 py-4 text-sm font-bold text-gray-700">Name</th>
                             <th className="px-6 py-4 text-sm font-bold text-gray-700">Slug</th>
-                            <th className="px-6 py-4 text-sm font-bold text-gray-700 text-right">Actions</th>
+                            {canManage && <th className="px-6 py-4 text-sm font-bold text-gray-700 text-right">Actions</th>}
                         </tr>
                     </thead>
                     <tbody className="divide-y">
@@ -75,22 +79,24 @@ export default function AdminCategoriesPage() {
                             <tr key={cat.id} className="hover:bg-gray-50">
                                 <td className="px-6 py-4 font-bold text-secondary">{cat.name}</td>
                                 <td className="px-6 py-4 text-sm text-gray-500">{cat.slug}</td>
-                                <td className="px-6 py-4 text-right">
-                                    <div className="flex justify-end gap-3">
-                                        <Link
-                                            href={`/admin/categories/edit/${cat.id}`}
-                                            className="bg-blue-600 text-white px-4 py-2 rounded-lg font-black text-xs uppercase tracking-wider hover:bg-blue-700 transition-all shadow-md shadow-blue-600/20"
-                                        >
-                                            Edit
-                                        </Link>
-                                        <button
-                                            onClick={() => deleteCategory(cat.id)}
-                                            className="bg-red-500 text-white px-4 py-2 rounded-lg font-black text-xs uppercase tracking-wider hover:bg-red-700 transition-all shadow-md shadow-red-500/20"
-                                        >
-                                            Delete
-                                        </button>
-                                    </div>
-                                </td>
+                                {canManage && (
+                                    <td className="px-6 py-4 text-right">
+                                        <div className="flex justify-end gap-3 min-w-max">
+                                            <Link
+                                                href={`/admin/categories/edit/${cat.id}`}
+                                                className="bg-blue-600 text-black px-4 py-2 rounded-lg font-black text-xs uppercase tracking-wider hover:bg-blue-700 transition-all shadow-md shadow-blue-600/20"
+                                            >
+                                                Edit
+                                            </Link>
+                                            <button
+                                                onClick={() => deleteCategory(cat.id)}
+                                                className="bg-red-500 text-black px-4 py-2 rounded-lg font-black text-xs uppercase tracking-wider hover:bg-red-700 transition-all shadow-md shadow-red-500/20"
+                                            >
+                                                Delete
+                                            </button>
+                                        </div>
+                                    </td>
+                                )}
                             </tr>
                         ))}
                     </tbody>

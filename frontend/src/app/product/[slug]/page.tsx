@@ -36,7 +36,7 @@ export default function ProductDetailsPage() {
     if (error || !product) return (
         <div className="p-20 text-center">
             <h1 className="text-2xl font-black mb-4">Product Not Found</h1>
-            <button onClick={() => router.push('/')} className="bg-primary text-white px-8 py-3 rounded-2xl font-black uppercase tracking-widest shadow-xl">Back to Store</button>
+            <button onClick={() => router.push('/')} className="bg-primary text-black px-8 py-3 rounded-2xl font-black uppercase tracking-widest shadow-xl">Back to Store</button>
         </div>
     );
 
@@ -137,7 +137,7 @@ export default function ProductDetailsPage() {
                                     <button
                                         onClick={() => setQuantity(Math.max(1, quantity - 1))}
                                         disabled={isOutOfStock}
-                                        className="w-10 h-10 flex items-center justify-center bg-white rounded-xl shadow-md font-black hover:bg-primary hover:text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                                        className="w-10 h-10 flex items-center justify-center bg-white rounded-xl shadow-md font-black hover:bg-primary hover:text-black transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                                     >-</button>
                                     <span className="w-8 text-center font-black text-lg">{quantity}</span>
                                     <button
@@ -145,7 +145,7 @@ export default function ProductDetailsPage() {
                                         disabled={isOutOfStock || quantity >= stock}
                                         className={`w-10 h-10 flex items-center justify-center bg-white rounded-xl shadow-md font-black transition-all ${isOutOfStock || quantity >= stock
                                             ? 'opacity-40 cursor-not-allowed text-gray-300'
-                                            : 'hover:bg-primary hover:text-white'
+                                            : 'hover:bg-primary hover:text-black'
                                             }`}
                                     >+</button>
                                 </div>
@@ -161,7 +161,7 @@ export default function ProductDetailsPage() {
                                     disabled={isOutOfStock}
                                     className={`flex-1 py-5 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl border-2 border-white/20 active:scale-95 transition-all ${isOutOfStock
                                         ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'
-                                        : 'bg-secondary text-white hover:bg-black shadow-secondary/30'
+                                        : 'bg-secondary text-black hover:bg-black hover:text-white shadow-secondary/30'
                                         }`}
                                 >
                                     {isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
@@ -171,7 +171,7 @@ export default function ProductDetailsPage() {
                                     disabled={isOutOfStock}
                                     className={`flex-1 py-5 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl border-2 border-white/20 active:scale-95 transition-all ${isOutOfStock
                                         ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'
-                                        : 'bg-primary text-white hover:bg-orange-600 shadow-primary/30'
+                                        : 'bg-primary text-black hover:bg-orange-600 shadow-primary/30'
                                         }`}
                                 >
                                     {isOutOfStock ? 'Unavailable' : 'Buy Now'}

@@ -22,7 +22,7 @@ export default function CartPage() {
                 </div>
                 <h1 className="text-2xl font-black text-secondary uppercase tracking-widest mb-4">Your Cart is Empty</h1>
                 <p className="text-gray-400 mb-8 max-w-xs text-center text-sm font-medium">Looks like you haven't added anything to your cart yet.</p>
-                <Link href="/" className="bg-primary text-white px-10 py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-primary/30 hover:bg-orange-600 transition-all active:scale-95">
+                <Link href="/" className="bg-primary text-black px-10 py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-primary/30 hover:bg-orange-600 transition-all active:scale-95">
                     Start Shopping
                 </Link>
             </div>
@@ -69,8 +69,8 @@ export default function CartPage() {
                                                 onClick={() => updateQuantity(item.productId, item.quantity + 1)}
                                                 disabled={item.quantity >= item.stock}
                                                 className={`w-8 h-8 flex items-center justify-center bg-white rounded-lg shadow-sm font-black transition-all border border-gray-100 ${item.quantity >= item.stock
-                                                        ? 'opacity-40 cursor-not-allowed text-gray-300'
-                                                        : 'hover:bg-green-50 text-green-500'
+                                                    ? 'opacity-40 cursor-not-allowed text-gray-300'
+                                                    : 'hover:bg-green-50 text-green-500'
                                                     }`}
                                             >+</button>
                                         </div>
@@ -109,7 +109,7 @@ export default function CartPage() {
 
                             <button
                                 onClick={() => router.push('/checkout')}
-                                className="w-full bg-primary text-white py-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-orange-600 transition-all shadow-xl shadow-primary/30 border-2 border-white/20 active:scale-95"
+                                className="w-full bg-primary text-black py-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-orange-600 transition-all shadow-xl shadow-primary/30 border-2 border-white/20 active:scale-95"
                             >
                                 Proceed to Checkout
                             </button>

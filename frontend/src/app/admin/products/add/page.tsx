@@ -123,8 +123,8 @@ export default function AddProductPage() {
                         + Add Another Image URL
                     </button>
                 </div>
-                <button type="submit" disabled={loading} className="w-full bg-primary text-white font-black py-5 rounded-[2rem] shadow-2xl shadow-primary/40 hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-[0.2em] text-sm border border-white/10">
-                    {loading ? 'Adding Product...' : 'Confirm & Add Product Now'}
+                <button type="submit" disabled={loading} className="w-full bg-primary text-black font-black py-5 rounded-[2rem] shadow-2xl shadow-primary/40 hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-[0.2em] text-sm border border-white/10">
+                    {loading ? 'Adding Product...' : 'Add Product'}
                 </button>
             </form>
         </div>

@@ -86,7 +86,7 @@ export default function TrackOrderPage() {
             <button
               type="submit"
               disabled={loading}
-              className="bg-primary text-white font-black px-10 py-4 rounded-2xl hover:bg-orange-600 transition-all disabled:opacity-50 shadow-xl shadow-primary/30 uppercase tracking-widest text-xs border-2 border-white/20 active:scale-95"
+              className="bg-primary text-black font-black px-10 py-4 rounded-2xl hover:bg-orange-600 transition-all disabled:opacity-50 shadow-xl shadow-primary/30 uppercase tracking-widest text-xs border-2 border-white/20 active:scale-95"
             >
               {loading ? 'Searching...' : 'Locate Order'}
             </button>
@@ -141,7 +141,7 @@ export default function TrackOrderPage() {
                   <span className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em] block mb-1">Amount Paid</span>
                   <span className="font-black text-4xl text-primary tracking-tighter">৳{order.total.toLocaleString()}</span>
                 </div>
-                <Link href="/" className="bg-secondary text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-black transition-all shadow-xl shadow-secondary/20">Return to Store</Link>
+                <Link href="/" className="bg-secondary text-black px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-black hover:text-white transition-all shadow-xl shadow-secondary/20">Return to Store</Link>
               </div>
             </div>
           </div>

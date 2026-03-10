@@ -53,7 +53,7 @@ export default function AddCategoryPage() {
                         className="w-full border-2 border-gray-100 rounded-2xl px-5 py-3.5 focus:border-primary transition-all font-bold text-secondary outline-none" />
                 </div>
                 <button type="submit" disabled={loading}
-                    className="w-full bg-primary text-white font-black py-5 rounded-[2rem] shadow-2xl shadow-primary/40 hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-[0.2em] text-sm mt-4 border border-white/10">
+                    className="w-full bg-primary text-black font-black py-5 rounded-[2rem] shadow-2xl shadow-primary/40 hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-[0.2em] text-sm mt-4 border border-white/10">
                     {loading ? 'Adding Category...' : 'Add Category Now'}
                 </button>
             </form>
