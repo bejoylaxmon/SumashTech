@@ -1,10 +1,45 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
+const xlsx = require('xlsx');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
 const { Pool } = require('pg');
 const { PrismaPg } = require('@prisma/adapter-pg');
 const { PrismaClient } = require('@prisma/client');
+
+// Configure multer for image uploads
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadDir = 'uploads';
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir);
+        }
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, uniqueSuffix + path.extname(file.originalname));
+    }
+});
+
+const uploadImage = multer({
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = /jpeg|jpg|png|gif|webp/;
+        const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+        const mimetype = allowedTypes.test(file.mimetype);
+        if (extname && mimetype) {
+            return cb(null, true);
+        }
+        cb(new Error('Only image files are allowed!'));
+    }
+});
+
+const upload = multer({ dest: 'uploads/' });
 
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL.replace('localhost', '127.0.0.1')
@@ -16,6 +51,7 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use('/uploads', express.static('uploads'));
 
 // Routes
 // Admin Middleware
@@ -121,18 +157,22 @@ app.put('/api/products/:id', checkPermission(['edit_product_full', 'edit_product
         const isEditor = perms.includes('edit_product_content');
 
         const allowedData = {};
-        const { name, slug, description, price, discount, stock, images, categoryId, brandId, isFeatured, isNew } = req.body;
+        const { name, slug, description, price, discount, stock, images, categoryId, brandId, isFeatured, isNew, sku, bookingMoney, purchasePoints, warranty, condition, peopleViewing, specifications, variants } = req.body;
 
         if (isAdmin) {
-            Object.assign(allowedData, { name, slug, description, price, discount, stock, images, categoryId, brandId, isFeatured, isNew });
+            Object.assign(allowedData, { 
+                name, slug, description, price, discount, stock, images, categoryId, brandId, isFeatured, isNew,
+                sku, bookingMoney, purchasePoints, warranty, condition, peopleViewing, specifications
+            });
         } else {
             if (isEditor) {
-                // Editor can edit content and pricing (as per matrix)
-                Object.assign(allowedData, { name, slug, description, price, discount, images, categoryId, brandId, isFeatured, isNew });
+                Object.assign(allowedData, { 
+                    name, slug, description, price, discount, images, categoryId, brandId, isFeatured, isNew,
+                    sku, bookingMoney, purchasePoints, warranty, condition, specifications
+                });
             }
             if (isManager) {
-                // Manager can edit stock and coupons (in this route just stock)
-                Object.assign(allowedData, { stock });
+                Object.assign(allowedData, { stock, peopleViewing });
             }
         }
 
@@ -140,7 +180,59 @@ app.put('/api/products/:id', checkPermission(['edit_product_full', 'edit_product
             where: { id: parseInt(req.params.id) },
             data: allowedData
         });
-        res.json(product);
+
+        // Update variants if provided
+        if (variants && isAdmin) {
+            // Get existing variants
+            const existingVariants = await prisma.productVariant.findMany({
+                where: { productId: parseInt(req.params.id) }
+            });
+
+            // Delete variants not in the new list
+            const newVariantIds = variants.filter((v) => v.id).map((v) => v.id);
+            await prisma.productVariant.deleteMany({
+                where: { 
+                    productId: parseInt(req.params.id),
+                    id: { notIn: newVariantIds }
+                }
+            });
+
+            // Upsert variants
+            for (const v of variants) {
+                if (v.id) {
+                    // Update existing
+                    await prisma.productVariant.update({
+                        where: { id: v.id },
+                        data: {
+                            value: v.value,
+                            price: parseFloat(v.price) || 0,
+                            stock: parseInt(v.stock) || 0,
+                            images: v.images || []
+                        }
+                    });
+                } else {
+                    // Create new
+                    await prisma.productVariant.create({
+                        data: {
+                            productId: parseInt(req.params.id),
+                            type: v.type,
+                            value: v.value,
+                            price: parseFloat(v.price) || 0,
+                            stock: parseInt(v.stock) || 0,
+                            images: v.images || []
+                        }
+                    });
+                }
+            }
+        }
+
+        // Fetch updated product with variants
+        const updatedProduct = await prisma.product.findUnique({
+            where: { id: parseInt(req.params.id) },
+            include: { variants: true }
+        });
+
+        res.json(updatedProduct);
     } catch (err) {
         console.error('Product update error:', err);
         res.status(500).json({ error: 'Failed to update product' });
@@ -286,18 +378,81 @@ app.put('/api/categories/:id', checkPermission(['edit_product_full', 'manage_inv
     }
 });
 
+// Get All Brands
+app.get('/api/brands', async (req, res) => {
+    try {
+        const brands = await prisma.brand.findMany({
+            orderBy: { name: 'asc' }
+        });
+        res.json(brands);
+    } catch (err) {
+        console.error('Brands fetch error:', err);
+        res.status(500).json({ error: 'Failed to fetch brands' });
+    }
+});
+
 // Create Product (Admin)
 app.post('/api/products', checkPermission(['edit_product_full', 'manage_inventory']), async (req, res) => {
     try {
-        const { name, description, price, discount, stock, images, categoryId, brandId, isFeatured, isNew } = req.body;
+        const { 
+            name, description, price, discount, stock, images, categoryId, brandId, 
+            isFeatured, isNew, sku, bookingMoney, purchasePoints, warranty, 
+            specifications, condition, peopleViewing, variants 
+        } = req.body;
         const slug = req.body.slug || name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+        
         const product = await prisma.product.create({
-            data: { name, slug, description, price, discount, stock, images, categoryId, brandId, isFeatured, isNew }
+            data: { 
+                name, 
+                slug, 
+                description, 
+                price: parseFloat(price) || 0, 
+                discount: parseFloat(discount) || 0, 
+                stock: parseInt(stock) || 0, 
+                images: images || [], 
+                categoryId: parseInt(categoryId), 
+                brandId: brandId ? parseInt(brandId) : null,
+                isFeatured: isFeatured || false,
+                isNew: isNew || false,
+                sku: sku || null,
+                bookingMoney: parseFloat(bookingMoney) || 0,
+                purchasePoints: parseInt(purchasePoints) || 0,
+                warranty: warranty || null,
+                specifications: specifications || null,
+                condition: condition || null,
+                peopleViewing: parseInt(peopleViewing) || 0,
+                variants: variants ? {
+                    create: variants.map((v) => ({
+                        type: v.type,
+                        value: v.value,
+                        price: parseFloat(v.price) || 0,
+                        stock: parseInt(v.stock) || 0,
+                        sku: v.sku || null,
+                        images: v.images || []
+                    }))
+                } : undefined
+            },
+            include: { variants: true }
         });
         res.status(201).json(product);
     } catch (err) {
         console.error('Product creation error:', err);
-        res.status(500).json({ error: 'Failed to create product' });
+        res.status(500).json({ error: 'Failed to create product', details: err.message });
+    }
+});
+
+// Upload Product Image
+app.post('/api/upload/image', uploadImage.single('image'), (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+        
+        const imageUrl = `/uploads/${req.file.filename}`;
+        res.json({ url: imageUrl });
+    } catch (err) {
+        console.error('Image upload error:', err);
+        res.status(500).json({ error: 'Failed to upload image' });
     }
 });
 
@@ -320,9 +475,26 @@ app.get('/api/products', async (req, res) => {
             include: {
                 category: true,
                 brand: true,
+                variants: true,
             },
         });
-        res.json(products);
+        
+        // Get ratings for all products (with error handling)
+        const productsWithRatings = await Promise.all(products.map(async (product) => {
+            try {
+                const reviews = await prisma.review.findMany({
+                    where: { productId: product.id }
+                });
+                const rating = reviews.length > 0
+                    ? Math.round((reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length) * 10) / 10
+                    : 0;
+                return { ...product, rating };
+            } catch (e) {
+                return { ...product, rating: 0 };
+            }
+        }));
+        
+        res.json(productsWithRatings);
     } catch (err) {
         console.error('Failed to fetch products:', err);
         res.status(500).json({ error: 'Failed to fetch products', details: err.message });
@@ -337,12 +509,97 @@ app.get('/api/products/slug/:slug', async (req, res) => {
             include: {
                 category: true,
                 brand: true,
+                variants: true,
             },
         });
         if (!product) return res.status(404).json({ error: 'Product not found' });
-        res.json(product);
+        
+        // Get actual rating from reviews (with error handling)
+        let rating = 0;
+        try {
+            const reviews = await prisma.review.findMany({
+                where: { productId: product.id }
+            });
+            rating = reviews.length > 0
+                ? Math.round((reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length) * 10) / 10
+                : 0;
+        } catch (e) {
+            // Review table might not exist yet
+            rating = 0;
+        }
+        
+        res.json({ ...product, rating });
     } catch (err) {
         res.status(500).json({ error: 'Failed' });
+    }
+});
+
+// Download Sample XLSX Template
+app.get('/api/products/sample-template', (req, res) => {
+    try {
+        const sampleData = [
+            {
+                name: "iPhone 17 Pro Max",
+                slug: "iphone-17-pro-max",
+                description: "Latest iPhone with advanced features",
+                price: 171999,
+                discount: 0,
+                stock: 50,
+                category: "Smartphone",
+                brand: "Apple",
+                sku: "IP17PM256",
+                bookingMoney: 10000,
+                purchasePoints: 500,
+                warranty: "2 Years Service Warranty",
+                condition: "Brand New",
+                isFeatured: true,
+                isNew: true,
+                storage_1: "256GB",
+                storage_price_1: 171999,
+                storage_stock_1: 20,
+                storage_2: "512GB",
+                storage_price_2: 190000,
+                storage_stock_2: 15,
+                storage_3: "1TB",
+                storage_price_3: 210000,
+                storage_stock_3: 10,
+                color_1: "Cosmic Orange",
+                color_price_1: 0,
+                color_stock_1: 20,
+                color_images_1: "https://example.com/orange1.jpg,https://example.com/orange2.jpg",
+                color_2: "Titanium",
+                color_price_2: 0,
+                color_stock_2: 15,
+                color_images_2: "https://example.com/titanium1.jpg,https://example.com/titanium2.jpg",
+                color_3: "Black",
+                color_price_3: 0,
+                color_stock_3: 15,
+                color_images_3: "https://example.com/black1.jpg,https://example.com/black2.jpg",
+                region_1: "Japan",
+                region_price_1: 0,
+                region_stock_1: 20,
+                region_2: "USA",
+                region_price_2: 0,
+                region_stock_2: 15,
+                region_3: "India",
+                region_price_3: 0,
+                region_stock_3: 15,
+                specifications: '{"display":"6.9″ LTPO Super Retina XDR OLED 120Hz","processor":"Apple A19 Pro","camera":"Triple 48MP Fusion","battery":"4832 mAh"}'
+            }
+        ];
+
+        const ws = xlsx.utils.json_to_sheet(sampleData);
+        const wb = xlsx.utils.book_new();
+        xlsx.utils.book_append_sheet(wb, ws, "Products");
+        
+        const buffer = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+        
+        res.setHeader('Content-Disposition', 'attachment; filename=product_template.xlsx');
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.send(buffer);
+    } catch (err) {
+        console.error('Template error:', err);
+        res.status(500).json({ error: 'Failed to generate template' });
     }
 });
 
@@ -728,10 +985,26 @@ app.get('/api/orders/user/:email', async (req, res) => {
 
         const orders = await prisma.order.findMany({
             where: { userId: user.id },
-            include: { items: { include: { product: true } } },
+            include: { 
+                items: { 
+                    include: { 
+                        product: true,
+                        review: true
+                    } 
+                } 
+            },
             orderBy: { createdAt: 'desc' }
         });
-        res.json(orders);
+        
+        const ordersWithRating = orders.map(order => ({
+            ...order,
+            items: order.items.map(item => ({
+                ...item,
+                rating: item.review?.rating || null
+            }))
+        }));
+        
+        res.json(ordersWithRating);
     } catch (err) {
         console.error('User orders fetch error:', err);
         res.status(500).json({ error: 'Failed to fetch your orders' });
@@ -833,7 +1106,344 @@ app.get('/api/orders/:id', async (req, res) => {
     }
 });
 
+// Submit a review (only for delivered orders)
+app.post('/api/reviews', async (req, res) => {
+    try {
+        const { orderItemId, rating, comment } = req.body;
+        const email = req.headers['x-user-email'];
+
+        if (!email) return res.status(401).json({ error: 'Unauthorized' });
+        if (!orderItemId || !rating) {
+            return res.status(400).json({ error: 'orderItemId and rating are required' });
+        }
+        if (rating < 1 || rating > 5) {
+            return res.status(400).json({ error: 'Rating must be between 1 and 5' });
+        }
+
+        const user = await prisma.user.findUnique({ where: { email } });
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        const orderItem = await prisma.orderItem.findUnique({
+            where: { id: orderItemId },
+            include: { order: true, product: true }
+        });
+
+        if (!orderItem) return res.status(404).json({ error: 'Order item not found' });
+        if (orderItem.order.userId !== user.id) {
+            return res.status(403).json({ error: 'Not authorized to review this item' });
+        }
+        if (orderItem.order.status !== 'DELIVERED') {
+            return res.status(400).json({ error: 'Can only review delivered orders' });
+        }
+
+        const existingReview = await prisma.review.findUnique({
+            where: { orderItemId }
+        });
+        if (existingReview) {
+            return res.status(400).json({ error: 'Already reviewed this item' });
+        }
+
+        const review = await prisma.review.create({
+            data: {
+                orderItemId,
+                productId: orderItem.productId,
+                userId: user.id,
+                rating,
+                comment
+            }
+        });
+
+        // Update product rating (average of all reviews)
+        const reviews = await prisma.review.findMany({
+            where: { productId: orderItem.productId }
+        });
+        const avgRating = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+        await prisma.product.update({
+            where: { id: orderItem.productId },
+            data: { rating: Math.round(avgRating * 10) / 10 }
+        });
+
+        res.status(201).json(review);
+    } catch (err) {
+        console.error('Review error:', err);
+        res.status(500).json({ error: 'Failed to submit review' });
+    }
+});
+
+// Get reviews for a product
+app.get('/api/products/:id/reviews', async (req, res) => {
+    try {
+        const productId = parseInt(req.params.id);
+        if (isNaN(productId)) return res.status(400).json({ error: 'Invalid product ID' });
+
+        let reviews = [];
+        try {
+            reviews = await prisma.review.findMany({
+                where: { productId },
+                include: {
+                    orderItem: {
+                        include: {
+                            order: {
+                                include: { user: { select: { name: true } } }
+                            }
+                        }
+                    }
+                },
+                orderBy: { createdAt: 'desc' }
+            });
+        } catch (e) {
+            // Review table might not exist yet
+            reviews = [];
+        }
+
+        const reviewsWithUser = reviews.map(r => ({
+            id: r.id,
+            rating: r.rating,
+            comment: r.comment,
+            userName: r.orderItem?.order?.user?.name || 'Anonymous',
+            createdAt: r.createdAt
+        }));
+
+        res.json(reviewsWithUser);
+    } catch (err) {
+        console.error('Fetch reviews error:', err);
+        res.status(500).json({ error: 'Failed to fetch reviews' });
+    }
+});
+
+// Get average rating for a product
+app.get('/api/products/:id/rating', async (req, res) => {
+    try {
+        const productId = parseInt(req.params.id);
+        if (isNaN(productId)) return res.status(400).json({ error: 'Invalid product ID' });
+
+        const reviews = await prisma.review.findMany({
+            where: { productId }
+        });
+
+        if (reviews.length === 0) {
+            return res.json({ averageRating: 0, totalReviews: 0 });
+        }
+
+        const averageRating = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+        res.json({
+            averageRating: Math.round(averageRating * 10) / 10,
+            totalReviews: reviews.length
+        });
+    } catch (err) {
+        console.error('Fetch rating error:', err);
+        res.status(500).json({ error: 'Failed to fetch rating' });
+    }
+});
+
+// Check if user can review an order item
+app.get('/api/orders/:orderId/items/:itemId/can-review', async (req, res) => {
+    try {
+        const { orderId, itemId } = req.params;
+        const email = req.headers['x-user-email'];
+
+        if (!email) return res.status(401).json({ error: 'Unauthorized' });
+
+        const user = await prisma.user.findUnique({ where: { email } });
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        const order = await prisma.order.findUnique({
+            where: { id: parseInt(orderId) },
+            include: {
+                items: {
+                    where: { id: parseInt(itemId) },
+                    include: { product: true }
+                }
+            }
+        });
+
+        if (!order || order.items.length === 0) {
+            return res.status(404).json({ error: 'Order item not found' });
+        }
+        if (order.userId !== user.id) {
+            return res.status(403).json({ error: 'Not authorized' });
+        }
+        if (order.status !== 'DELIVERED') {
+            return res.json({ canReview: false, reason: 'Order not delivered yet' });
+        }
+
+        const existingReview = await prisma.review.findUnique({
+            where: { orderItemId: parseInt(itemId) }
+        });
+
+        res.json({ canReview: !existingReview, hasReviewed: !!existingReview });
+    } catch (err) {
+        console.error('Check review status error:', err);
+        res.status(500).json({ error: 'Failed to check review status' });
+    }
+});
+
+// Bulk Upload Products from XLSX
+app.post('/api/products/bulk-upload', checkPermission(['edit_product_full', 'manage_inventory']), upload.single('file'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+
+        const workbook = xlsx.readFile(req.file.path);
+        const sheetName = workbook.SheetNames[0];
+        const products = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+        if (!products || products.length === 0) {
+            return res.status(400).json({ error: 'No data found in Excel file' });
+        }
+
+        const results = [];
+        const errors = [];
+
+        for (const row of products) {
+            try {
+                // Find category
+                let categoryId = null;
+                if (row.category) {
+                    const category = await prisma.category.findFirst({
+                        where: { 
+                            OR: [
+                                { name: { equals: row.category, mode: 'insensitive' } },
+                                { slug: { equals: row.category.toLowerCase().replace(/\s+/g, '-'), mode: 'insensitive' } }
+                            ]
+                        }
+                    });
+                    categoryId = category?.id;
+                }
+
+                // Find brand
+                let brandId = null;
+                if (row.brand) {
+                    const brand = await prisma.brand.findFirst({
+                        where: { 
+                            OR: [
+                                { name: { equals: row.brand, mode: 'insensitive' } },
+                                { slug: { equals: row.brand.toLowerCase().replace(/\s+/g, '-'), mode: 'insensitive' } }
+                            ]
+                        }
+                    });
+                    brandId = brand?.id;
+                }
+
+                // Parse specifications
+                let specifications = null;
+                if (row.specifications) {
+                    try {
+                        specifications = typeof row.specifications === 'string' 
+                            ? JSON.parse(row.specifications) 
+                            : row.specifications;
+                    } catch (e) {
+                        specifications = null;
+                    }
+                }
+
+                // Create product
+                const product = await prisma.product.create({
+                    data: {
+                        name: row.name,
+                        slug: row.slug || row.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+                        description: row.description || null,
+                        price: parseFloat(row.price) || 0,
+                        discount: parseFloat(row.discount) || 0,
+                        stock: parseInt(row.stock) || 0,
+                        categoryId: categoryId || 1,
+                        brandId: brandId,
+                        sku: row.sku || null,
+                        bookingMoney: parseFloat(row.bookingMoney) || 0,
+                        purchasePoints: parseInt(row.purchasePoints) || 0,
+                        warranty: row.warranty || null,
+                        condition: row.condition || null,
+                        isFeatured: row.isFeatured === true || row.isFeatured === 'true' || row.isFeatured === 1,
+                        isNew: row.isNew === true || row.isNew === 'true' || row.isNew === 1,
+                        specifications: specifications,
+                        images: []
+                    }
+                });
+
+                // Create storage variants
+                for (let i = 1; i <= 4; i++) {
+                    const storageKey = `storage_${i}`;
+                    const priceKey = `storage_price_${i}`;
+                    const stockKey = `storage_stock_${i}`;
+                    
+                    if (row[storageKey]) {
+                        await prisma.productVariant.create({
+                            data: {
+                                productId: product.id,
+                                type: 'storage',
+                                value: row[storageKey],
+                                price: parseFloat(row[priceKey]) || 0,
+                                stock: parseInt(row[stockKey]) || 0
+                            }
+                        });
+                    }
+                }
+
+                // Create color variants
+                for (let i = 1; i <= 5; i++) {
+                    const colorKey = `color_${i}`;
+                    const priceKey = `color_price_${i}`;
+                    const stockKey = `color_stock_${i}`;
+                    const imagesKey = `color_images_${i}`;
+                    
+                    if (row[colorKey]) {
+                        let colorImages = [];
+                        if (row[imagesKey]) {
+                            colorImages = row[imagesKey].split(',').map((url) => url.trim()).filter((url) => url);
+                        }
+                        await prisma.productVariant.create({
+                            data: {
+                                productId: product.id,
+                                type: 'color',
+                                value: row[colorKey],
+                                price: parseFloat(row[priceKey]) || 0,
+                                stock: parseInt(row[stockKey]) || 0,
+                                images: colorImages
+                            }
+                        });
+                    }
+                }
+
+                // Create region variants
+                for (let i = 1; i <= 5; i++) {
+                    const regionKey = `region_${i}`;
+                    const priceKey = `region_price_${i}`;
+                    const stockKey = `region_stock_${i}`;
+                    
+                    if (row[regionKey]) {
+                        await prisma.productVariant.create({
+                            data: {
+                                productId: product.id,
+                                type: 'region',
+                                value: row[regionKey],
+                                price: parseFloat(row[priceKey]) || 0,
+                                stock: parseInt(row[stockKey]) || 0
+                            }
+                        });
+                    }
+                }
+
+                results.push({ name: product.name, status: 'success' });
+            } catch (err) {
+                errors.push({ name: row.name, error: err.message });
+            }
+        }
+
+        res.json({
+            success: results.length,
+            failed: errors.length,
+            results,
+            errors
+        });
+    } catch (err) {
+        console.error('Bulk upload error:', err);
+        res.status(500).json({ error: 'Failed to upload products', details: err.message });
+    }
+});
+
 const PORT = process.env.PORT || 54321;
+
 const server = app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });

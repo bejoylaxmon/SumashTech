@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
-import { Facebook, Instagram, Youtube, Phone, MapPin, Package, Search, ShoppingCart, LogOut, Settings, Eye } from 'lucide-react';
+import { Phone, MapPin, Search, ShoppingCart, LogOut, Settings, Eye, Package, Newspaper, Headphones, Building2, TrendingUp, LogIn, User } from 'lucide-react';
 
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
@@ -19,6 +19,7 @@ export default function Header() {
     const [searchQuery, setSearchQuery] = useState('');
     const [companyPhone, setCompanyPhone] = useState('+880 1971-122222');
     const [companyAddress, setCompanyAddress] = useState('Shop Locations');
+    const [headerLogo, setHeaderLogo] = useState<string | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
     const [categories, setCategories] = useState<any[]>([]);
 
@@ -30,6 +31,7 @@ export default function Header() {
                 const data = await res.json();
                 if (data.phone) setCompanyPhone(data.phone);
                 if (data.address) setCompanyAddress(data.address);
+                if (data.headerLogo) setHeaderLogo(data.headerLogo);
             } catch (err) {
                 console.error('Failed to fetch header settings:', err);
             }
@@ -63,6 +65,13 @@ export default function Header() {
     // Close menu on route change
     useEffect(() => {
         setUserMenuOpen(false);
+    }, [pathname]);
+
+    // Clear search query when leaving search page
+    useEffect(() => {
+        if (!pathname.startsWith('/search')) {
+            setSearchQuery('');
+        }
     }, [pathname]);
 
     const handleLogout = () => {
@@ -108,44 +117,35 @@ export default function Header() {
                             <MapPin className="w-3.5 h-3.5" /> {companyAddress}
                         </span>
                     </div>
-<div className="flex gap-6 items-center">
-                        <Link href="/track-order" className="hover:text-primary transition-colors flex items-center gap-2">
-                            <Package className="w-3.5 h-3.5" /> Track Your Order
-                        </Link>
-                        <span className="w-px h-3 bg-black/20"></span>
-                        <div className="flex gap-3">
-                            <a href="#" className="hover:scale-110 transition-transform hover:text-primary">
-                                <Facebook className="w-3.5 h-3.5" />
-                            </a>
-                            <a href="#" className="hover:scale-110 transition-transform hover:text-primary">
-                                <Instagram className="w-3.5 h-3.5" />
-                            </a>
-                            <a href="#" className="hover:scale-110 transition-transform hover:text-primary">
-                                <Youtube className="w-3.5 h-3.5" />
-                            </a>
-                        </div>
-                    </div>
                 </div>
             </div>
 
             {/* Main Header */}
             <div className="container mx-auto px-4 py-5 flex items-center justify-between gap-8">
                 {/* Logo */}
-                <Link href="/" className="flex-shrink-0 relative group">
-                    <Image
-                        src="/logo.png"
-                        alt="Sumash Tech"
-                        width={280}
-                        height={70}
-                        className="h-12 w-auto object-contain"
-                        priority
-                    />
+                <Link href="/" className="flex-shrink-0 relative group" style={{ minWidth: '120px', maxWidth: '200px' }}>
+                    {headerLogo ? (
+                        <img
+                            src={headerLogo}
+                            alt="Sumash Tech"
+                            className="h-12 w-full max-w-[200px] object-contain"
+                        />
+                    ) : (
+                        <Image
+                            src="/logo.png"
+                            alt="Sumash Tech"
+                            width={280}
+                            height={70}
+                            className="h-12 w-auto object-contain"
+                            priority
+                        />
+                    )}
                     <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full"></span>
                 </Link>
 
                 {/* Search Bar - Refined */}
                 <form onSubmit={handleSearch} className="flex-grow max-w-2xl relative group">
-<div className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors">
+                    <div className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors">
                         <Search className="h-5 w-5" />
                     </div>
                     <input
@@ -162,90 +162,42 @@ export default function Header() {
                     </div>
                 </form>
 
-                {/* Icons */}
+                {/* Login/Logout & Cart Section */}
                 <div className="flex items-center gap-4">
-                    {/* Login / Signup Button - Always Visible */}
-                    {!user && (
-                        <Link href="/login" className="flex items-center gap-2 bg-secondary text-black px-4 py-2 rounded-xl font-black hover:bg-black hover:text-white transition-all shadow-sm border border-white/20">
-                            <span className="text-[10px] uppercase tracking-[0.15em] whitespace-nowrap">Login / Signup</span>
-                        </Link>
-                    )}
-
-                    {/* User Menu - When Logged In */}
-                    {user && (
+                    <Link href="/cart" className="relative text-gray-500 hover:text-primary transition-colors">
+                        <ShoppingCart className="h-6 w-6" />
+                        {cartCount > 0 && (
+                            <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] bg-primary text-black text-[9px] font-black rounded-full flex items-center justify-center px-1">
+                                {cartCount > 99 ? '99+' : cartCount}
+                            </span>
+                        )}
+                    </Link>
+                    {user ? (
                         <div className="relative" ref={menuRef}>
-                            <button
+                            <button 
                                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                                className="flex items-center gap-3 cursor-pointer group"
+                                className="text-xs font-black uppercase tracking-wider text-gray-500 hover:text-secondary flex items-center gap-2"
                             >
-                                <div className="flex flex-col items-end hidden sm:block">
-                                    <span className="text-sm font-bold text-secondary block">{user.name}</span>
-                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">{user.role === 'CUSTOMER' ? 'Customer' : 'Admin'}</span>
-                                </div>
-                                <div className="h-10 w-10 flex-shrink-0 rounded-full bg-gradient-to-br from-secondary to-gray-800 flex items-center justify-center border-2 border-gray-200 shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all">
-                                    <span className="text-white font-black text-sm">{user.name.charAt(0).toUpperCase()}</span>
-                                </div>
-                                <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 text-gray-400 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
+                                MY ACCOUNT
                             </button>
-
-                            {/* Dropdown Menu */}
                             {userMenuOpen && (
-                                <div className="absolute right-0 top-full mt-3 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
-                                    {/* User Info Header */}
-                                    <div className="px-5 py-4 bg-gray-50 border-b border-gray-100">
-                                        <p className="font-black text-secondary text-sm">{user.name}</p>
-                                        <p className="text-gray-400 text-xs mt-0.5">{user.email}</p>
-                                    </div>
-
-                                    <div className="py-2">
-                                        {user.role === 'CUSTOMER' && (
-                                            <Link href="/orders" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors text-sm font-bold text-gray-700">
-                                                <span className="text-base">📦</span> My Orders
-                                            </Link>
-                                        )}
-                                        <Link href="/track-order" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors text-sm font-bold text-gray-700">
-                                            <span className="text-base">🔍</span> Track Order
+                                <div className="absolute right-0 top-full bg-white shadow-xl border border-gray-100 py-2 min-w-[180px] z-50">
+                                    {user.role === 'CUSTOMER' && (
+                                        <Link href="/orders" className="block px-4 py-2 text-xs font-bold text-gray-600 hover:text-primary hover:bg-gray-50">
+                                            My Orders
                                         </Link>
-                                        <Link href="/cart" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors text-sm font-bold text-gray-700">
-                                            <span className="text-base">🛒</span> My Cart
-                                        </Link>
-                                        {isAdmin && (
-                                            <>
-                                                <div className="border-t border-gray-100 my-1"></div>
-                                                <Link href="/admin/products" onClick={() => setUserMenuOpen(false)} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors text-sm font-bold text-gray-700">
-                                                    <span className="text-base">⚙️</span> Admin Dashboard
-                                                </Link>
-                                            </>
-                                        )}
-                                    </div>
-
-                                    <div className="border-t border-gray-100">
-                                        <button
-                                            onClick={handleLogout}
-                                            className="w-full flex items-center gap-3 px-5 py-3 hover:bg-red-50 transition-colors text-sm font-bold text-red-500"
-                                        >
-                                            <LogOut className="w-4 h-4" /> Logout
-                                        </button>
-                                    </div>
+                                    )}
+                                    <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-xs font-bold text-gray-600 hover:text-primary hover:bg-gray-50">
+                                        Logout
+                                    </button>
                                 </div>
                             )}
                         </div>
+                    ) : (
+                        <Link href="/login" className="p-2 rounded-lg hover:bg-gray-100 transition-all text-gray-500 hover:text-primary">
+                            <LogIn className="h-6 w-6" />
+                        </Link>
                     )}
-
-                    {/* Cart Icon - Always Visible */}
-                    <Link href="/cart" className="flex flex-col items-center hover:text-primary transition-colors relative flex-shrink-0 group">
-                        <div className="bg-secondary p-1.5 rounded-lg group-hover:bg-primary transition-all shadow-sm">
-                            <ShoppingCart className="h-4 w-4 text-black group-hover:text-white transition-colors" />
-                        </div>
-                        {cartCount > 0 && (
-                            <span className="absolute -top-1 -right-1 bg-primary text-black text-[10px] rounded-full h-4 w-4 flex items-center justify-center font-black border-2 border-white shadow-lg animate-bounce-short">
-                                {cartCount}
-                            </span>
-                        )}
-                        <span className="text-[10px] font-black uppercase tracking-widest mt-1 text-gray-600 group-hover:text-primary hidden sm:block">Cart</span>
-                    </Link>
                 </div>
             </div>
 
@@ -292,11 +244,12 @@ export default function Header() {
                                             </Link>
                                         )
                                     ))}
+                                    
                                 </>
                             ) : (
                                 <>
                                     <Link href="/" className="text-xs font-black text-gray-500 hover:text-secondary h-14 flex items-center px-4 uppercase tracking-widest transition-colors mr-6 border-r border-gray-100">STORE</Link>
-                                    {(user.permissions?.includes('view_product_detail') || user.role === 'SUPER_ADMIN') && (
+                                    {(user.role === 'SUPER_ADMIN' || user.role === 'ADMIN' || user.role === 'MANAGER') && (
                                         <Link href="/admin/products" className={navLinkClass('/admin/products', 'text-blue-600')}>📦 Products</Link>
                                     )}
                                     {(user.permissions?.includes('manage_inventory') || user.permissions?.includes('manage_coupons') || user.role === 'SUPER_ADMIN') && (

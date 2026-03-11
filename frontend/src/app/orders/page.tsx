@@ -3,11 +3,16 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { API_BASE } from '@/lib/api';
+import { Star } from 'lucide-react';
 
 export default function UserOrdersPage() {
     const [orders, setOrders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [ratingModal, setRatingModal] = useState<{orderId: number; itemId: number; productName: string} | null>(null);
+    const [rating, setRating] = useState(5);
+    const [comment, setComment] = useState('');
+    const [submitting, setSubmitting] = useState(false);
     const { user } = useAuth();
 
     useEffect(() => {
@@ -30,6 +35,37 @@ export default function UserOrdersPage() {
         };
         fetchOrders();
     }, [user]);
+
+    const submitReview = async () => {
+        if (!ratingModal || !user) return;
+        setSubmitting(true);
+        try {
+            const res = await fetch(`${API_BASE}/api/reviews`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-user-email': user.email
+                },
+                body: JSON.stringify({
+                    orderItemId: ratingModal.itemId,
+                    rating,
+                    comment: comment || null
+                })
+            });
+            if (res.ok) {
+                setRatingModal(null);
+                setRating(5);
+                setComment('');
+            } else {
+                const data = await res.json();
+                alert(data.error || 'Failed to submit review');
+            }
+        } catch (err) {
+            alert('Failed to submit review');
+        } finally {
+            setSubmitting(false);
+        }
+    };
 
     if (loading) return <div className="p-10 text-center font-bold">Loading your orders...</div>;
     if (error) return <div className="p-10 text-center text-red-500 font-bold">Error: {error}</div>;
@@ -71,7 +107,7 @@ export default function UserOrdersPage() {
                                         <div className="bg-white w-12 h-12 rounded-xl flex items-center justify-center shadow-sm font-black text-primary border border-gray-100">#</div>
                                         <div>
                                             <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Order Reference</span>
-                                            <p className="font-black text-secondary text-lg">#{index + 1}</p>
+                                            <p className="font-black text-secondary text-lg">#{orders.length - index}</p>
                                         </div>
                                     </div>
                                     <div className="flex gap-8">
@@ -96,7 +132,24 @@ export default function UserOrdersPage() {
                                                         <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Qty: {item.quantity} × ৳{item.price.toLocaleString()}</span>
                                                     </div>
                                                 </div>
-                                                <span className="font-black text-secondary bg-gray-50 px-3 py-1 rounded-lg">৳{(item.price * item.quantity).toLocaleString()}</span>
+                                                <div className="flex items-center gap-3">
+                                                    {order.status === 'DELIVERED' && !item.rating && (
+                                                        <button
+                                                            onClick={() => setRatingModal({ orderId: order.id, itemId: item.id, productName: item.product.name })}
+                                                            className="text-[10px] font-black uppercase tracking-widest bg-primary text-black px-3 py-1.5 rounded-lg hover:bg-orange-600 transition-all"
+                                                        >
+                                                            Rate
+                                                        </button>
+                                                    )}
+                                                    {order.status === 'DELIVERED' && item.rating && (
+                                                        <div className="flex items-center gap-1">
+                                                            {[1, 2, 3, 4, 5].map((star) => (
+                                                                <Star key={star} className={`w-3 h-3 ${star <= item.rating ? 'fill-yellow-500 text-yellow-500' : 'text-gray-300'}`} />
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                    <span className="font-black text-secondary bg-gray-50 px-3 py-1 rounded-lg">৳{(item.price * item.quantity).toLocaleString()}</span>
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
@@ -122,6 +175,43 @@ export default function UserOrdersPage() {
                     </div>
                 )}
             </div>
+
+            {ratingModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl p-6 max-w-md w-full">
+                        <h3 className="text-xl font-black text-secondary mb-4">Rate {ratingModal.productName}</h3>
+                        <div className="flex justify-center gap-2 mb-4">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                                <button key={star} onClick={() => setRating(star)}>
+                                    <Star className={`w-8 h-8 ${star <= rating ? 'fill-yellow-500 text-yellow-500' : 'text-gray-300'}`} />
+                                </button>
+                            ))}
+                        </div>
+                        <textarea
+                            value={comment}
+                            onChange={(e) => setComment(e.target.value)}
+                            placeholder="Write a review (optional)"
+                            className="w-full border border-gray-200 rounded-xl p-3 text-sm mb-4"
+                            rows={3}
+                        />
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setRatingModal(null)}
+                                className="flex-1 py-2 border border-gray-200 rounded-xl font-bold text-gray-500"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={submitReview}
+                                disabled={submitting}
+                                className="flex-1 py-2 bg-primary text-black rounded-xl font-bold hover:bg-orange-600 transition-all disabled:opacity-50"
+                            >
+                                {submitting ? 'Submitting...' : 'Submit'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

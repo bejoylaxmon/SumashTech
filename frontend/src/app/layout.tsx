@@ -15,7 +15,6 @@ const geistMono = Geist_Mono({
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import PopupOffer from "@/components/PopupOffer";
-import Chatbot from "@/components/Chatbot";
 import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
 import RouteGuard from "@/components/RouteGuard";
@@ -40,7 +39,6 @@ export default function RootLayout({
             <RouteGuard>
               <main>{children}</main>
             </RouteGuard>
-            <Chatbot />
             <Footer />
           </CartProvider>
         </AuthProvider>

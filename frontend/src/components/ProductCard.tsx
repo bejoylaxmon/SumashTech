@@ -22,8 +22,9 @@ interface ProductProps {
 
 export default function ProductCard({ product }: ProductProps) {
   const { addToCart } = useCart();
-  const discountPrice = product.discount
-    ? product.price - (product.price * product.discount / 100)
+  const discount = product.discount || 0;
+  const discountPrice = discount > 0 
+    ? product.price - (product.price * discount / 100)
     : null;
 
   const imageUrl = product.images && product.images.length > 0
@@ -32,7 +33,7 @@ export default function ProductCard({ product }: ProductProps) {
 
   const stock = product.stock ?? 0;
   const isOutOfStock = stock <= 0;
-  const isLowStock = stock > 0 && stock <= 3;
+  const isLowStock = stock > 0 && stock <= 5;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -46,10 +47,10 @@ export default function ProductCard({ product }: ProductProps) {
       {/* Badges */}
       <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
         {isOutOfStock && (
-          <span className="bg-gray-800 text-black text-[10px] font-bold px-2 py-1 rounded-full uppercase shadow-sm">Out of Stock</span>
+          <span className="bg-gray-800 text-black text-[10px] font-bold px-2 py-1 rounded-full uppercase shadow-sm">Stock Out</span>
         )}
         {isLowStock && (
-          <span className="bg-amber-500 text-black text-[10px] font-bold px-2 py-1 rounded-full uppercase shadow-sm">Low Stock ({stock} left)</span>
+          <span className="bg-amber-500 text-black text-[10px] font-bold px-2 py-1 rounded-full uppercase shadow-sm">Low Stock</span>
         )}
         {product.isFeatured && (
           <span className="bg-primary text-black text-[10px] font-bold px-2 py-1 rounded-full uppercase shadow-sm">Featured</span>
@@ -57,8 +58,8 @@ export default function ProductCard({ product }: ProductProps) {
         {product.isNew && (
           <span className="bg-green-500 text-black text-[10px] font-bold px-2 py-1 rounded-full uppercase shadow-sm">New</span>
         )}
-        {product.discount && (
-          <span className="bg-red-500 text-black text-[10px] font-bold px-2 py-1 rounded-full uppercase shadow-sm">-{product.discount}%</span>
+        {discount > 0 && (
+          <span className="bg-red-500 text-black text-[10px] font-bold px-2 py-1 rounded-full uppercase shadow-sm">-{discount}%</span>
         )}
       </div>
 
@@ -80,10 +81,14 @@ export default function ProductCard({ product }: ProductProps) {
           {product.name}
         </h3>
 
-        {product.rating && (
+        {product.rating !== undefined && product.rating > 0 && (
           <div className="flex items-center gap-1 mb-2">
-            <span className="text-yellow-500 text-xs">★</span>
-            <span className="text-gray-500 text-xs">{product.rating}</span>
+            <div className="flex">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <span key={star} className={`text-xs ${star <= Math.round(product.rating || 0) ? 'text-yellow-500' : 'text-gray-300'}`}>★</span>
+              ))}
+            </div>
+            <span className="text-gray-500 text-xs">({product.rating})</span>
           </div>
         )}
 

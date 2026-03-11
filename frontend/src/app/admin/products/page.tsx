@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { API_BASE } from '@/lib/api';
 
@@ -10,6 +11,23 @@ export default function AdminProductsPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const { user } = useAuth();
+    const router = useRouter();
+
+    const isAuthorized = useMemo(() => 
+        user?.role === 'SUPER_ADMIN' || 
+        user?.role === 'ADMIN' || 
+        user?.role === 'MANAGER' || 
+        user?.permissions?.includes('view_product_detail') ||
+        user?.permissions?.includes('edit_product_full') ||
+        user?.permissions?.includes('manage_inventory'),
+        [user]
+    );
+
+    useEffect(() => {
+        if (user && !isAuthorized) {
+            router.push('/');
+        }
+    }, [user, isAuthorized, router]);
 
     const fetchProducts = async () => {
         try {
@@ -51,10 +69,32 @@ export default function AdminProductsPage() {
         }
     }, [user]);
 
-    const canAdd = useMemo(() => user?.permissions?.includes('edit_product_full') || user?.role === 'SUPER_ADMIN', [user]);
-    const canEdit = useMemo(() => user?.permissions?.includes('edit_product_full') || user?.permissions?.includes('edit_product_content') || user?.permissions?.includes('edit_product_stock') || user?.role === 'SUPER_ADMIN', [user]);
-    const canDelete = useMemo(() => user?.permissions?.includes('edit_product_full') || user?.role === 'SUPER_ADMIN', [user]);
+    const canAdd = useMemo(() => 
+        user?.role === 'SUPER_ADMIN' || 
+        user?.role === 'ADMIN' || 
+        user?.role === 'MANAGER' || 
+        user?.permissions?.includes('edit_product_full') || 
+        user?.permissions?.includes('manage_inventory'), 
+        [user]
+    );
+    const canEdit = useMemo(() => 
+        user?.role === 'SUPER_ADMIN' || 
+        user?.role === 'ADMIN' || 
+        user?.role === 'MANAGER' || 
+        user?.permissions?.includes('edit_product_full') || 
+        user?.permissions?.includes('edit_product_content') || 
+        user?.permissions?.includes('edit_product_stock'), 
+        [user]
+    );
+    const canDelete = useMemo(() => 
+        user?.role === 'SUPER_ADMIN' || 
+        user?.role === 'ADMIN' || 
+        user?.role === 'MANAGER' || 
+        user?.permissions?.includes('edit_product_full'), 
+        [user]
+    );
 
+    if (!isAuthorized && user) return <div className="p-10 text-center text-secondary font-bold">Access Denied</div>;
     if (loading) return <div className="p-10 text-center text-secondary font-bold">Loading Products...</div>;
 
     return (
@@ -62,9 +102,14 @@ export default function AdminProductsPage() {
             <div className="flex justify-between items-center mb-8">
                 <h1 className="text-3xl font-bold text-secondary">Manage Products</h1>
                 {canAdd && (
-                    <Link href="/admin/products/add" className="bg-primary text-black px-8 py-3 rounded-2xl font-black uppercase tracking-widest text-xs shadow-2xl shadow-primary/40 hover:bg-orange-600 transition-all border-2 border-white/20">
-                        + Add Product Now
-                    </Link>
+                    <div className="flex gap-3">
+                        <Link href="/admin/products/bulk-upload" className="bg-green-600 text-black px-6 py-3 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg hover:bg-green-700 transition-all border-2 border-white/20">
+                            📥 Bulk Upload
+                        </Link>
+                        <Link href="/admin/products/add" className="bg-primary text-black px-8 py-3 rounded-2xl font-black uppercase tracking-widest text-xs shadow-2xl shadow-primary/40 hover:bg-orange-600 transition-all border-2 border-white/20">
+                            + Add Product Now
+                        </Link>
+                    </div>
                 )}
             </div>
 

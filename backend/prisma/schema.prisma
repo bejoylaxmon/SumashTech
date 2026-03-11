@@ -76,9 +76,18 @@ model Product {
   discount    Float       @default(0) // Discount percentage
   stock       Int         @default(0)
   images      String[]    // Array of image URLs
-  rating      Float       @default(0)
+  rating      Float       @default(0) // Average rating from reviews
   isFeatured  Boolean     @default(false)
   isNew       Boolean     @default(false)
+  
+  // New fields
+  sku             String?
+  bookingMoney   Float       @default(0)
+  purchasePoints  Int         @default(0)
+  warranty        String?
+  specifications  Json?       // { display, processor, camera, battery, network, etc. }
+  condition       String?
+  peopleViewing   Int         @default(0)
 
   categoryId  Int
   category    Category    @relation(fields: [categoryId], references: [id])
@@ -87,9 +96,28 @@ model Product {
   brand       Brand?      @relation(fields: [brandId], references: [id])
 
   orderItems  OrderItem[]
+  reviews     Review[]    @relation("ProductReviews")
+  variants    ProductVariant[]
 
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+}
+
+model ProductVariant {
+  id          Int       @id @default(autoincrement())
+  productId   Int
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  type        String    // "storage", "color", "region"
+  value       String    // "256GB", "Cosmic Orange", "Japan"
+  price       Float     // Price for this variant
+  stock       Int       @default(0)
+  sku         String?
+  images      String[]  // Images for color variants
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([productId, type, value])
 }
 
 model Order {
@@ -126,6 +154,21 @@ model OrderItem {
   product   Product  @relation(fields: [productId], references: [id])
   quantity  Int
   price     Float
+  rating    Int?     // Rating given by customer (1-5)
+  review    Review?
+}
+
+model Review {
+  id          Int       @id @default(autoincrement())
+  orderItemId Int       @unique
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id])
+  productId   Int
+  product     Product   @relation("ProductReviews", fields: [productId], references: [id])
+  userId      Int       // User who gave the review
+  rating      Int       // 1-5 stars
+  comment     String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model PopupOffer {
@@ -143,6 +186,7 @@ model HomeSettings {
   id          Int      @id @default(autoincrement())
   phone       String   @default("+88 01234 567890")
   address     String   @default("Dhaka, Bangladesh")
+  headerLogo  String?
   heroSlides  Json     @default("[{\"id\":1,\"title\":\"iPhone 16 Pro Max\",\"subtitle\":\"Experience the ultimate Apple innovation. Titanium design. Pro camera system.\",\"badge\":\"New Arrival\",\"price\":\"Starting from ৳165,000\",\"cta\":\"Pre-order Now\",\"link\":\"/category/smartphone-iphone\",\"bg\":\"from-secondary to-gray-800\",\"accent\":\"16\",\"image\":\"https://placehold.co/800x600/111/fff?text=iPhone+16+Pro+Max\"},{\"id\":2,\"title\":\"MacBook Air M3\",\"subtitle\":\"Strikingly thin. Fast. All-day battery life. The world's best-selling laptop.\",\"badge\":\"Workstation\",\"price\":\"Exclusive Price ৳125,000\",\"cta\":\"Explore Models\",\"link\":\"/category/mac\",\"bg\":\"from-blue-900 to-secondary\",\"accent\":\"M3\",\"image\":\"https://placehold.co/800x600/1e293b/fff?text=MacBook+Air+M3\"},{\"id\":3,\"title\":\"EcoFlow Delta 2\",\"subtitle\":\"Power for any situation. Fast charging. Reliable portable power station.\",\"badge\":\"Outdoor Gear\",\"price\":\"Special Offer ৳68,000\",\"cta\":\"Buy Now\",\"link\":\"/category/gadgets\",\"bg\":\"from-green-900 to-secondary\",\"accent\":\"SOLAR\",\"image\":\"https://placehold.co/800x600/064e3b/fff?text=EcoFlow+Delta+2\"}]")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
