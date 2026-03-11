@@ -7,6 +7,7 @@ import { API_BASE } from '@/lib/api';
 export default function AddProductPage() {
     const [name, setName] = useState('');
     const [slug, setSlug] = useState('');
+    const [slugEdited, setSlugEdited] = useState(false);
     const [description, setDescription] = useState('');
     const [price, setPrice] = useState('');
     const [stock, setStock] = useState('');
@@ -16,6 +17,22 @@ export default function AddProductPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const router = useRouter();
+
+    const generateSlug = (text: string) => {
+        return text.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    };
+
+    const handleNameChange = (value: string) => {
+        setName(value);
+        if (!slugEdited) {
+            setSlug(generateSlug(value));
+        }
+    };
+
+    const handleSlugChange = (value: string) => {
+        setSlug(value);
+        setSlugEdited(true);
+    };
 
     useEffect(() => {
         const fetchCategories = async () => {
@@ -74,11 +91,13 @@ export default function AddProductPage() {
                 {error && <div className="text-red-500">{error}</div>}
                 <div>
                     <label className="block text-sm font-bold text-gray-700 mb-1">Product Name</label>
-                    <input type="text" value={name} onChange={(e) => setName(e.target.value)} required className="w-full border rounded-xl px-4 py-2" />
+                    <input type="text" value={name} onChange={(e) => handleNameChange(e.target.value)} required className="w-full border rounded-xl px-4 py-2" />
                 </div>
                 <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1">Slug</label>
-                    <input type="text" value={slug} onChange={(e) => setSlug(e.target.value)} required className="w-full border rounded-xl px-4 py-2" />
+                    <label className="block text-sm font-bold text-gray-700 mb-1">Slug (auto-generated)</label>
+                    <input type="text" value={slug} onChange={(e) => handleSlugChange(e.target.value)} 
+                        placeholder="Auto-generated from name"
+                        className="w-full border rounded-xl px-4 py-2" />
                 </div>
                 <div>
                     <label className="block text-sm font-bold text-gray-700 mb-1">Description</label>

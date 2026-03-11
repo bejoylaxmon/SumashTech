@@ -26,6 +26,7 @@ export default function Header() {
         const fetchSettings = async () => {
             try {
                 const res = await fetch(`${API_BASE}/api/home-settings`);
+                if (!res.ok) return;
                 const data = await res.json();
                 if (data.phone) setCompanyPhone(data.phone);
                 if (data.address) setCompanyAddress(data.address);
@@ -38,6 +39,7 @@ export default function Header() {
         const fetchCategories = async () => {
             try {
                 const res = await fetch(`${API_BASE}/api/categories`);
+                if (!res.ok) return;
                 const data = await res.json();
                 setCategories(data);
             } catch (err) {
@@ -313,10 +315,7 @@ export default function Header() {
                                         <Link href="/admin/reports" className={navLinkClass('/admin/reports', 'text-teal-600')}>📊 Reports</Link>
                                     )}
                                     {(user.role === 'SUPER_ADMIN' || user.role === 'MANAGER') && (
-                                        <>
-                                            <Link href="/admin/home-settings" className={navLinkClass('/admin/home-settings', 'text-pink-600')}>🏠 Home Settings</Link>
-                                            <Link href="/admin/popup-offers" className={navLinkClass('/admin/popup-offers', 'text-red-600')}>🎯 Popup Offers</Link>
-                                        </>
+                                        <Link href="/admin/home-settings" className={navLinkClass('/admin/home-settings', 'text-pink-600')}>🏠 Home Settings</Link>
                                     )}
                                 </>
                             )}

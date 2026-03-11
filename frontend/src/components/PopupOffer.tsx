@@ -24,6 +24,7 @@ export default function PopupOffer() {
         const fetchPopup = async () => {
             try {
                 const res = await fetch(`${API_BASE}/api/promotions/popup`);
+                if (!res.ok) return;
                 const data = await res.json();
                 if (data.id && data.isActive) {
                     setPopup(data);

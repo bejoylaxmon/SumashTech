@@ -6,6 +6,7 @@ import { API_BASE } from '@/lib/api';
 
 export default function AdminReportsPage() {
     const [report, setReport] = useState<any>(null);
+    const [lowStock, setLowStock] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const { user } = useAuth();
 
@@ -15,12 +16,28 @@ export default function AdminReportsPage() {
                 const res = await fetch(`${API_BASE}/api/admin/reports/sales`, {
                     headers: { 'x-user-email': user?.email || '' }
                 });
+                if (!res.ok) return;
                 setReport(await res.json());
             } finally {
                 setLoading(false);
             }
         };
-        if (user) fetchReport();
+        const fetchLowStock = async () => {
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/reports/low-stock`, {
+                    headers: { 'x-user-email': user?.email || '' }
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+                setLowStock(data.products || []);
+            } catch (err) {
+                console.error('Failed to fetch low stock:', err);
+            }
+        };
+        if (user) {
+            fetchReport();
+            fetchLowStock();
+        }
     }, [user]);
 
     const canViewReports = user?.permissions?.includes('view_financial_reports') || user?.role === 'SUPER_ADMIN';
@@ -142,6 +159,52 @@ export default function AdminReportsPage() {
                             ))}
                         </div>
                     </div>
+                </div>
+
+                {/* Low Stock Products Section */}
+                <div className="bg-white rounded-[40px] shadow-2xl shadow-gray-200/60 border border-gray-100 p-10 mt-8">
+                    <h3 className="text-xl font-black text-secondary uppercase tracking-widest flex items-center gap-3 mb-10">
+                        <span className="w-1.5 h-6 bg-red-500 rounded-full"></span>
+                        Low Stock Products
+                    </h3>
+                    {lowStock.length > 0 ? (
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="border-b border-gray-100">
+                                        <th className="text-left py-4 px-4 text-xs font-black text-gray-400 uppercase tracking-widest">Product</th>
+                                        <th className="text-left py-4 px-4 text-xs font-black text-gray-400 uppercase tracking-widest">Category</th>
+                                        <th className="text-right py-4 px-4 text-xs font-black text-gray-400 uppercase tracking-widest">Stock</th>
+                                        <th className="text-right py-4 px-4 text-xs font-black text-gray-400 uppercase tracking-widest">Price</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {lowStock.map((product: any) => (
+                                        <tr key={product.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                                            <td className="py-4 px-4">
+                                                <span className="font-bold text-secondary">{product.name}</span>
+                                            </td>
+                                            <td className="py-4 px-4">
+                                                <span className="text-xs font-bold text-gray-400">{product.category?.name}</span>
+                                            </td>
+                                            <td className="py-4 px-4 text-right">
+                                                <span className={`font-black text-xl ${product.stock <= 5 ? 'text-red-500' : 'text-orange-500'}`}>
+                                                    {product.stock}
+                                                </span>
+                                            </td>
+                                            <td className="py-4 px-4 text-right">
+                                                <span className="font-bold text-secondary">৳{product.price?.toLocaleString()}</span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                        <div className="text-center py-10 text-green-500 font-black uppercase text-xs tracking-widest flex items-center justify-center gap-2">
+                            <span className="text-2xl">✓</span> All products are well stocked
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

@@ -64,6 +64,7 @@ export default function HeroSlider() {
         const fetchSlides = async () => {
             try {
                 const res = await fetch(`${API_BASE}/api/home-settings`);
+                if (!res.ok) return;
                 const data = await res.json();
                 const slides = typeof data.heroSlides === 'string' 
                     ? JSON.parse(data.heroSlides) 

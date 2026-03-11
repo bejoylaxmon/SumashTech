@@ -19,6 +19,7 @@ export default function ProductList({ title, filter }: ProductListProps) {
       try {
         const url = `${API_BASE}/api/products${filter ? `?${filter}=true` : ''}`;
         const res = await fetch(url);
+        if (!res.ok) return;
         const data = await res.json();
         if (Array.isArray(data)) {
           setProducts(data);

@@ -36,7 +36,11 @@ const cmsPages = [
     { slug: 'about', label: 'About Us' },
     { slug: 'contact', label: 'Contact' },
     { slug: 'terms', label: 'Terms & Conditions' },
-    { slug: 'privacy', label: 'Privacy Policy' }
+    { slug: 'privacy', label: 'Privacy Policy' },
+    { slug: 'shipping', label: 'Shipping Policy' },
+    { slug: 'return-policy', label: 'Return Policy' },
+    { slug: 'faq', label: 'FAQ' },
+    { slug: 'support', label: 'Support' }
 ];
 
 export default function HomeSettingsPage() {
@@ -45,7 +49,7 @@ export default function HomeSettingsPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
-    const [activeTab, setActiveTab] = useState<'company' | 'hero' | 'pages'>('company');
+    const [activeTab, setActiveTab] = useState<'company' | 'hero' | 'pages' | 'popup'>('company');
 
     const [phone, setPhone] = useState('');
     const [address, setAddress] = useState('');
@@ -63,6 +67,7 @@ export default function HomeSettingsPage() {
     const fetchSettings = async () => {
         try {
             const res = await fetch(`${API_BASE}/api/home-settings`);
+            if (!res.ok) return;
             const data = await res.json();
             setSettings(data);
             setPhone(data.phone || '');
@@ -83,6 +88,7 @@ export default function HomeSettingsPage() {
             const res = await fetch(`${API_BASE}/api/admin/pages`, {
                 headers: { 'x-user-email': user?.email || '' }
             });
+            if (!res.ok) return;
             const data = await res.json();
             setPages(Array.isArray(data) ? data : []);
         } catch (err) {
@@ -222,9 +228,12 @@ export default function HomeSettingsPage() {
                 >
                     CMS Pages
                 </button>
-                <a href="/admin/popup-offers" className="px-6 py-3 font-bold text-gray-500 hover:text-primary whitespace-nowrap">
-                    Popup Offers →
-                </a>
+                <button
+                    onClick={() => setActiveTab('popup')}
+                    className={`px-6 py-3 font-bold whitespace-nowrap ${activeTab === 'popup' ? 'border-b-2 border-primary text-primary' : 'text-gray-500'}`}
+                >
+                    Popup Offers
+                </button>
             </div>
 
             {activeTab === 'company' && (
@@ -456,7 +465,25 @@ export default function HomeSettingsPage() {
                 </div>
             )}
 
-            {activeTab !== 'pages' && (
+            {activeTab === 'popup' && (
+                <div className="bg-white rounded-2xl shadow-lg p-6">
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-xl font-bold">Popup Offers</h2>
+                        <a
+                            href="/admin/popup-offers"
+                            className="bg-primary text-black px-6 py-2 rounded-xl font-bold hover:bg-orange-600 transition-all"
+                        >
+                            + Add New Popup
+                        </a>
+                    </div>
+                    <p className="text-gray-500">Manage your popup offers here. Click "Add New Popup" to create a new popup offer.</p>
+                    <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                        <p className="text-sm text-gray-600">Go to <a href="/admin/popup-offers" className="text-primary font-bold hover:underline">Popup Offers Page</a> to manage all popup offers.</p>
+                    </div>
+                </div>
+            )}
+
+            {activeTab !== 'pages' && activeTab !== 'popup' && (
                 <div className="mt-6">
                     <button
                         onClick={handleSave}

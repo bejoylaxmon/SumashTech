@@ -64,14 +64,14 @@ export default function UserOrdersPage() {
                     </div>
                 ) : (
                     <div className="space-y-8">
-                        {orders.map((order) => (
+                        {orders.map((order, index) => (
                             <div key={order.id} className="bg-white rounded-[32px] shadow-sm hover:shadow-xl transition-all border border-gray-100 overflow-hidden group">
                                 <div className="px-8 py-6 bg-gray-50/50 border-b border-gray-100 flex flex-wrap justify-between items-center gap-4">
                                     <div className="flex items-center gap-4">
                                         <div className="bg-white w-12 h-12 rounded-xl flex items-center justify-center shadow-sm font-black text-primary border border-gray-100">#</div>
                                         <div>
                                             <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Order Reference</span>
-                                            <p className="font-black text-secondary text-lg">#{order.id}</p>
+                                            <p className="font-black text-secondary text-lg">#{index + 1}</p>
                                         </div>
                                     </div>
                                     <div className="flex gap-8">

@@ -7,11 +7,28 @@ import { API_BASE } from '@/lib/api';
 export default function AddCategoryPage() {
     const [name, setName] = useState('');
     const [slug, setSlug] = useState('');
+    const [slugEdited, setSlugEdited] = useState(false);
     const [parentId, setParentId] = useState('');
     const [categories, setCategories] = useState<{id: number; name: string; slug: string}[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const router = useRouter();
+
+    const generateSlug = (text: string) => {
+        return text.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    };
+
+    const handleNameChange = (value: string) => {
+        setName(value);
+        if (!slugEdited) {
+            setSlug(generateSlug(value));
+        }
+    };
+
+    const handleSlugChange = (value: string) => {
+        setSlug(value);
+        setSlugEdited(true);
+    };
 
     useEffect(() => {
         fetch(`${API_BASE}/api/categories`)
@@ -57,12 +74,13 @@ export default function AddCategoryPage() {
                 {error && <div className="bg-red-50 text-red-500 p-4 rounded-2xl text-sm font-bold border border-red-100">{error}</div>}
                 <div>
                     <label className="block text-xs font-black text-gray-400 mb-2 uppercase tracking-widest">Category Name</label>
-                    <input type="text" value={name} onChange={(e) => setName(e.target.value)} required
+                    <input type="text" value={name} onChange={(e) => handleNameChange(e.target.value)} required
                         className="w-full border-2 border-gray-100 rounded-2xl px-5 py-3.5 focus:border-primary transition-all font-bold text-secondary outline-none" />
                 </div>
                 <div>
-                    <label className="block text-xs font-black text-gray-400 mb-2 uppercase tracking-widest">Slug</label>
-                    <input type="text" value={slug} onChange={(e) => setSlug(e.target.value)} required
+                    <label className="block text-xs font-black text-gray-400 mb-2 uppercase tracking-widest">Slug (auto-generated)</label>
+                    <input type="text" value={slug} onChange={(e) => handleSlugChange(e.target.value)} 
+                        placeholder="Auto-generated from name"
                         className="w-full border-2 border-gray-100 rounded-2xl px-5 py-3.5 focus:border-primary transition-all font-bold text-secondary outline-none" />
                 </div>
                 <div>

@@ -13,6 +13,7 @@ export default function Footer() {
     const fetchSettings = async () => {
       try {
         const res = await fetch(`${API_BASE}/api/home-settings`);
+        if (!res.ok) return;
         const data = await res.json();
         if (data.phone) setPhone(data.phone);
         if (data.address) setAddress(data.address);
@@ -53,10 +54,10 @@ export default function Footer() {
           <div>
             <h4 className="text-white font-semibold mb-4">Customer Service</h4>
             <ul className="space-y-2 text-sm">
-              <li><a href="#" className="hover:text-primary">Shipping Policy</a></li>
-              <li><a href="#" className="hover:text-primary">Return Policy</a></li>
-              <li><a href="#" className="hover:text-primary">FAQ</a></li>
-              <li><a href="#" className="hover:text-primary">Support</a></li>
+              <li><Link href="/shipping" className="hover:text-primary">Shipping Policy</Link></li>
+              <li><Link href="/return-policy" className="hover:text-primary">Return Policy</Link></li>
+              <li><Link href="/faq" className="hover:text-primary">FAQ</Link></li>
+              <li><Link href="/support" className="hover:text-primary">Support</Link></li>
             </ul>
           </div>
           
