@@ -246,7 +246,11 @@ app.get('/api/categories', async (req, res) => {
 // Create Category (Admin)
 app.post('/api/categories', checkPermission(['edit_product_full', 'manage_inventory', 'edit_product_content']), async (req, res) => {
     try {
-        const category = await prisma.category.create({ data: req.body });
+        const { name, parentId } = req.body;
+        const slug = req.body.slug || name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+        const category = await prisma.category.create({ 
+            data: { name, slug, parentId: parentId || null } 
+        });
         res.status(201).json(category);
     } catch (err) {
         console.error('Category creation error:', err);
@@ -285,7 +289,8 @@ app.put('/api/categories/:id', checkPermission(['edit_product_full', 'manage_inv
 // Create Product (Admin)
 app.post('/api/products', checkPermission(['edit_product_full', 'manage_inventory']), async (req, res) => {
     try {
-        const { name, slug, description, price, discount, stock, images, categoryId, brandId, isFeatured, isNew } = req.body;
+        const { name, description, price, discount, stock, images, categoryId, brandId, isFeatured, isNew } = req.body;
+        const slug = req.body.slug || name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
         const product = await prisma.product.create({
             data: { name, slug, description, price, discount, stock, images, categoryId, brandId, isFeatured, isNew }
         });
@@ -690,6 +695,28 @@ app.get('/api/admin/reports/sales', checkPermission('view_financial_reports'), a
     } catch (err) {
         console.error('Sales report error:', err);
         res.status(500).json({ error: 'Failed to fetch sales report' });
+    }
+});
+
+// Admin: Low Stock Products
+app.get('/api/admin/reports/low-stock', checkPermission(['view_financial_reports', 'manage_inventory']), async (req, res) => {
+    try {
+        const threshold = parseInt(req.query.threshold) || 10;
+        const lowStockProducts = await prisma.product.findMany({
+            where: {
+                stock: {
+                    lte: threshold
+                }
+            },
+            include: {
+                category: { select: { name: true } }
+            },
+            orderBy: { stock: 'asc' }
+        });
+        res.json({ products: lowStockProducts, threshold });
+    } catch (err) {
+        console.error('Low stock report error:', err);
+        res.status(500).json({ error: 'Failed to fetch low stock report' });
     }
 });
 
