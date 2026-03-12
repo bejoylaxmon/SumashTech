@@ -270,6 +270,9 @@ export default function Header() {
                                     {(user.role === 'SUPER_ADMIN' || user.role === 'MANAGER') && (
                                         <Link href="/admin/home-settings" className={navLinkClass('/admin/home-settings', 'text-pink-600')}>🏠 Home Settings</Link>
                                     )}
+                                    {(user.role === 'SUPER_ADMIN' || user.role === 'ADMIN' || user.role === 'MANAGER') && (
+                                        <Link href="/admin/chat" className={navLinkClass('/admin/chat', 'text-cyan-600')}>💬 Chat</Link>
+                                    )}
                                 </>
                             )}
                         </div>

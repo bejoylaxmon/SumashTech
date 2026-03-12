@@ -266,7 +266,7 @@ app.get('/api/health', (req, res) => {
 app.get('/api/seed', async (req, res) => {
     try {
         // 1. Permissions
-        const permissionsData = ['manage_products', 'manage_categories', 'manage_brands', 'view_orders', 'manage_orders', 'manage_users', 'view_reports', 'buy_products', 'view_own_orders'];
+        const permissionsData = ['manage_products', 'manage_categories', 'manage_brands', 'view_orders', 'manage_orders', 'manage_users', 'view_reports', 'buy_products', 'view_own_orders', 'manage_chat'];
         const permissions = {};
         for (const p of permissionsData) {
             permissions[p] = await prisma.permission.upsert({ where: { name: p }, update: {}, create: { name: p } });
@@ -1439,6 +1439,224 @@ app.post('/api/products/bulk-upload', checkPermission(['edit_product_full', 'man
     } catch (err) {
         console.error('Bulk upload error:', err);
         res.status(500).json({ error: 'Failed to upload products', details: err.message });
+    }
+});
+
+// Chat API Routes
+
+// Customer: Get or create conversation
+app.post('/api/chat/conversation', async (req, res) => {
+    try {
+        const { customerId, customerName, customerEmail } = req.body;
+        
+        if (!customerId) {
+            return res.status(400).json({ error: 'Customer ID required' });
+        }
+
+        let conversation = await prisma.chatConversation.findFirst({
+            where: { customerId: parseInt(customerId) }
+        });
+
+        if (!conversation) {
+            conversation = await prisma.chatConversation.create({
+                data: {
+                    customerId: parseInt(customerId),
+                    customerName,
+                    customerEmail
+                }
+            });
+        }
+
+        res.json(conversation);
+    } catch (err) {
+        console.error('Chat conversation error:', err);
+        res.status(500).json({ error: 'Failed to get conversation' });
+    }
+});
+
+// Customer: Send message
+app.post('/api/chat/message', async (req, res) => {
+    try {
+        const { conversationId, customerId, customerName, content } = req.body;
+
+        let conversation = await prisma.chatConversation.findUnique({
+            where: { id: parseInt(conversationId) }
+        });
+
+        if (!conversation) {
+            conversation = await prisma.chatConversation.create({
+                data: {
+                    customerId: parseInt(customerId),
+                    customerName,
+                    lastMessage: content.substring(0, 100),
+                    lastMessageAt: new Date()
+                }
+            });
+        }
+
+        const message = await prisma.chatMessage.create({
+            data: {
+                conversationId: conversation.id,
+                sender: 'customer',
+                content
+            }
+        });
+
+        await prisma.chatConversation.update({
+            where: { id: conversation.id },
+            data: {
+                lastMessage: content.substring(0, 100),
+                lastMessageAt: new Date(),
+                unreadAdmin: { increment: 1 }
+            }
+        });
+
+        res.json({ conversation, message });
+    } catch (err) {
+        console.error('Chat message error:', err);
+        res.status(500).json({ error: 'Failed to send message' });
+    }
+});
+
+// Customer: Get messages
+app.get('/api/chat/conversation/:conversationId/messages', async (req, res) => {
+    try {
+        const { conversationId } = req.params;
+        
+        const messages = await prisma.chatMessage.findMany({
+            where: { conversationId: parseInt(conversationId) },
+            orderBy: { createdAt: 'asc' }
+        });
+
+        res.json(messages);
+    } catch (err) {
+        console.error('Chat messages error:', err);
+        res.status(500).json({ error: 'Failed to get messages' });
+    }
+});
+
+// Customer: Get own conversations
+app.get('/api/chat/customer/:customerId', async (req, res) => {
+    try {
+        const { customerId } = req.params;
+        
+        const conversations = await prisma.chatConversation.findMany({
+            where: { customerId: parseInt(customerId) },
+            orderBy: { lastMessageAt: 'desc' }
+        });
+
+        res.json(conversations);
+    } catch (err) {
+        console.error('Chat conversations error:', err);
+        res.status(500).json({ error: 'Failed to get conversations' });
+    }
+});
+
+// Customer: Mark messages as read
+app.put('/api/chat/conversation/:conversationId/read', async (req, res) => {
+    try {
+        const { conversationId } = req.params;
+        
+        await prisma.chatMessage.updateMany({
+            where: { conversationId: parseInt(conversationId), sender: 'admin', isRead: false },
+            data: { isRead: true }
+        });
+
+        await prisma.chatConversation.update({
+            where: { id: parseInt(conversationId) },
+            data: { unreadCustomer: 0 }
+        });
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Chat read error:', err);
+        res.status(500).json({ error: 'Failed to mark as read' });
+    }
+});
+
+// Admin: Get all conversations
+app.get('/api/admin/chat/conversations', checkPermission(['manage_chat', 'view_orders_all']), async (req, res) => {
+    try {
+        const conversations = await prisma.chatConversation.findMany({
+            orderBy: { lastMessageAt: 'desc' }
+        });
+
+        res.json(conversations);
+    } catch (err) {
+        console.error('Admin chat conversations error:', err);
+        res.status(500).json({ error: 'Failed to get conversations' });
+    }
+});
+
+// Admin: Get messages for a conversation
+app.get('/api/admin/chat/conversation/:conversationId/messages', checkPermission(['manage_chat', 'view_orders_all']), async (req, res) => {
+    try {
+        const { conversationId } = req.params;
+        
+        const messages = await prisma.chatMessage.findMany({
+            where: { conversationId: parseInt(conversationId) },
+            orderBy: { createdAt: 'asc' }
+        });
+
+        await prisma.chatConversation.update({
+            where: { id: parseInt(conversationId) },
+            data: { unreadAdmin: 0 }
+        });
+
+        await prisma.chatMessage.updateMany({
+            where: { conversationId: parseInt(conversationId), sender: 'customer', isRead: false },
+            data: { isRead: true }
+        });
+
+        res.json(messages);
+    } catch (err) {
+        console.error('Admin chat messages error:', err);
+        res.status(500).json({ error: 'Failed to get messages' });
+    }
+});
+
+// Admin: Send reply
+app.post('/api/admin/chat/reply', checkPermission(['manage_chat', 'view_orders_all']), async (req, res) => {
+    try {
+        const { conversationId, adminId, adminName, content } = req.body;
+
+        const message = await prisma.chatMessage.create({
+            data: {
+                conversationId: parseInt(conversationId),
+                sender: 'admin',
+                senderId: adminId,
+                senderName: adminName,
+                content
+            }
+        });
+
+        await prisma.chatConversation.update({
+            where: { id: parseInt(conversationId) },
+            data: {
+                lastMessage: content.substring(0, 100),
+                lastMessageAt: new Date(),
+                unreadCustomer: { increment: 1 }
+            }
+        });
+
+        res.json(message);
+    } catch (err) {
+        console.error('Admin chat reply error:', err);
+        res.status(500).json({ error: 'Failed to send reply' });
+    }
+});
+
+// Admin: Get unread count
+app.get('/api/admin/chat/unread', checkPermission(['manage_chat', 'view_orders_all']), async (req, res) => {
+    try {
+        const result = await prisma.chatConversation.aggregate({
+            _sum: { unreadAdmin: true }
+        });
+
+        res.json({ unread: result._sum.unreadAdmin || 0 });
+    } catch (err) {
+        console.error('Admin chat unread error:', err);
+        res.status(500).json({ error: 'Failed to get unread count' });
     }
 });
 
