@@ -66,8 +66,8 @@ export default function HeroSlider() {
                 const res = await fetch(`${API_BASE}/api/home-settings`);
                 if (!res.ok) return;
                 const data = await res.json();
-                const slides = typeof data.heroSlides === 'string' 
-                    ? JSON.parse(data.heroSlides) 
+                const slides = typeof data.heroSlides === 'string'
+                    ? JSON.parse(data.heroSlides)
                     : (data.heroSlides || []);
                 if (Array.isArray(slides) && slides.length > 0) {
                     setSlides(slides);
@@ -107,21 +107,21 @@ export default function HeroSlider() {
                         </div>
 
                         <div className="relative z-10 max-w-xl">
-                            <span className="inline-block bg-primary/20 text-black text-[10px] font-black uppercase tracking-[0.2em] px-4 py-2 rounded-full border border-primary/30 mb-6 backdrop-blur-md animate-fade-in">
+                            <span className="inline-block bg-primary/20 text-black text-[10px] font-black uppercase tracking-[0.2em] px-4 py-2 rounded-full border border-primary/30 mb-4 md:mb-6 backdrop-blur-md animate-fade-in">
                                 {slide.badge}
                             </span>
-                            <h2 className="text-4xl md:text-7xl font-black text-white mb-6 leading-tight animate-slide-up">
+                            <h2 className="text-3xl md:text-7xl font-black text-white mb-4 md:mb-6 leading-tight animate-slide-up">
                                 {slide.title}
                             </h2>
-                            <p className="text-gray-300 text-sm md:text-lg mb-8 max-w-md font-medium animate-slide-up delay-100">
+                            <p className="text-gray-300 text-xs md:text-lg mb-6 md:mb-8 max-w-md font-medium animate-slide-up delay-100">
                                 {slide.subtitle}
                             </p>
-                            <div className="mb-10 animate-slide-up delay-200">
-                                <span className="text-xl md:text-2xl font-black text-white">{slide.price}</span>
+                            <div className="mb-6 md:mb-10 animate-slide-up delay-200">
+                                <span className="text-lg md:text-2xl font-black text-white">{slide.price}</span>
                             </div>
                             <Link
                                 href={slide.link}
-                                className="inline-flex items-center gap-3 bg-primary text-black font-black px-10 py-5 rounded-2xl hover:bg-orange-600 transition-all shadow-xl shadow-primary/20 group/btn"
+                                className="inline-flex items-center gap-3 bg-primary text-black font-black px-6 md:px-10 py-3 md:py-5 rounded-xl md:rounded-2xl hover:bg-orange-600 transition-all shadow-xl shadow-primary/20 group/btn text-sm md:text-base"
                             >
                                 {slide.cta}
                                 <span className="group-hover:translate-x-1 transition-transform text-black">→</span>

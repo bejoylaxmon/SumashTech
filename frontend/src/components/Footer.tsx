@@ -27,8 +27,8 @@ export default function Footer() {
   return (
     <footer className="bg-gray-900 text-gray-300 py-12">
       <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-          <div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-10 md:gap-8 mb-8">
+          <div className="col-span-2 md:col-span-1">
             <h3 className="text-white text-lg font-bold mb-4">SumashTech</h3>
             <p className="text-sm text-gray-400 mb-4">
               Your one-stop shop for the latest electronics and gadgets in Bangladesh.
@@ -40,7 +40,7 @@ export default function Footer() {
               <a href="#" className="hover:text-white"><Youtube className="w-5 h-5" /></a>
             </div>
           </div>
-          
+
           <div>
             <h4 className="text-white font-semibold mb-4">Quick Links</h4>
             <ul className="space-y-2 text-sm">
@@ -50,7 +50,7 @@ export default function Footer() {
               <li><Link href="/privacy" className="hover:text-primary">Privacy Policy</Link></li>
             </ul>
           </div>
-          
+
           <div>
             <h4 className="text-white font-semibold mb-4">Customer Service</h4>
             <ul className="space-y-2 text-sm">
@@ -60,8 +60,8 @@ export default function Footer() {
               <li><Link href="/support" className="hover:text-primary">Support</Link></li>
             </ul>
           </div>
-          
-          <div>
+
+          <div className="col-span-2 md:col-span-1">
             <h4 className="text-white font-semibold mb-4">Contact Us</h4>
             <ul className="space-y-2 text-sm">
               <li>{address}</li>
@@ -71,7 +71,7 @@ export default function Footer() {
             </ul>
           </div>
         </div>
-        
+
         <div className="border-t border-gray-800 pt-8 text-center text-sm text-gray-500">
           &copy; {new Date().getFullYear()} SumashTech. All rights reserved.
         </div>

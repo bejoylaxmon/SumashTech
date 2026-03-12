@@ -24,6 +24,7 @@ model User {
   verifiedOrders Order[]     @relation("VerifiedOrders")
   shippedOrders  Order[]     @relation("ShippedOrders")
   refundedOrders Order[]     @relation("RefundedOrders")
+  tickets        SupportTicket[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -142,6 +143,7 @@ model Order {
   refundedBy     User?       @relation("RefundedOrders", fields: [refundedById], references: [id])
 
   items         OrderItem[]
+  tickets       SupportTicket[]
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 }
@@ -212,6 +214,7 @@ model ChatConversation {
   lastMessageAt   DateTime       @default(now())
   unreadCustomer  Int            @default(0)   // Unread count for customer
   unreadAdmin     Int            @default(0)   // Unread count for admin
+  fbPsid          String?        @unique       // Facebook Page Scoped ID
   messages        ChatMessage[]
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
@@ -229,3 +232,64 @@ model ChatMessage {
   createdAt      DateTime          @default(now())
 }
 
+model FaqNode {
+  id          Int      @id @default(autoincrement())
+  question    String
+  answer      String
+  category    String?
+  order       Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SupportTicket {
+  id          Int      @id @default(autoincrement())
+  userId      Int?
+  user        User?    @relation(fields: [userId], references: [id])
+  orderId     Int?
+  order       Order?   @relation(fields: [orderId], references: [id])
+  subject     String
+  description String
+  status      String   @default("OPEN") // OPEN, IN_PROGRESS, RESOLVED, CLOSED
+  priority    String   @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AutomationAction {
+  id                  Int      @id @default(autoincrement())
+  actionId            String   @unique // e.g., "cancel_order", "track_order"
+  actionName          String
+  description         String?
+  requiredConditions  Json?    // Array of conditions
+  apiEndpoint         String?
+  confirmationRequired Boolean @default(true)
+  isActive            Boolean  @default(true)
+  rules               ActionRule[]
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model ActionRule {
+  id          Int      @id @default(autoincrement())
+  actionId    String
+  action      AutomationAction @relation(fields: [actionId], references: [actionId])
+  condition   String   // e.g., "order_status = processing", "shipping_status = not_shipped"
+  errorMessage String? // Message to show if condition fails
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Proactive Support Events
+model ProactiveChatEvent {
+  id         Int      @id @default(autoincrement())
+  userId     Int      // target customer
+  eventType  String   // order_created | order_delayed | payment_failed | cart_abandoned | order_delivered | return_window_closing
+  orderId    Int?     // linked order (if any)
+  payload    Json?    // extra data (order total, tracking URL, discount code, etc.)
+  status     String   @default("pending") // pending | delivered | dismissed
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}

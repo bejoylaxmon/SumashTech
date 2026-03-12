@@ -47,13 +47,51 @@ const pool = new Pool({
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
+const axios = require('axios');
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
+// Facebook Webhook Verification
+app.get('/api/webhook/facebook', (req, res) => {
+    const mode = req.query['hub.mode'];
+    const token = req.query['hub.verify_token'];
+    const challenge = req.query['hub.challenge'];
+
+    if (mode && token) {
+        if (mode === 'subscribe' && token === process.env.VERIFY_TOKEN) {
+            console.log('[FB Webhook] Verified');
+            res.status(200).send(challenge);
+        } else {
+            res.sendStatus(403);
+        }
+    }
+});
+
 // Routes
+
+// ─────────────────────────────────────────────────────────────────
+// Proactive Chat Event Helper
+// ─────────────────────────────────────────────────────────────────
+const createProactiveEvent = async (userId, eventType, orderId = null, payload = {}) => {
+    try {
+        await prisma.proactiveChatEvent.create({
+            data: {
+                userId: parseInt(userId),
+                eventType,
+                orderId: orderId ? parseInt(orderId) : null,
+                payload,
+                status: 'pending'
+            }
+        });
+        console.log(`[ProactiveChat] Event '${eventType}' created for user ${userId}`);
+    } catch (err) {
+        console.error('[ProactiveChat] Failed to create event:', err.message);
+    }
+};
+
 // Admin Middleware
 const checkPermission = (permissions) => async (req, res, next) => {
     try {
@@ -160,13 +198,13 @@ app.put('/api/products/:id', checkPermission(['edit_product_full', 'edit_product
         const { name, slug, description, price, discount, stock, images, categoryId, brandId, isFeatured, isNew, sku, bookingMoney, purchasePoints, warranty, condition, peopleViewing, specifications, variants } = req.body;
 
         if (isAdmin) {
-            Object.assign(allowedData, { 
+            Object.assign(allowedData, {
                 name, slug, description, price, discount, stock, images, categoryId, brandId, isFeatured, isNew,
                 sku, bookingMoney, purchasePoints, warranty, condition, peopleViewing, specifications
             });
         } else {
             if (isEditor) {
-                Object.assign(allowedData, { 
+                Object.assign(allowedData, {
                     name, slug, description, price, discount, images, categoryId, brandId, isFeatured, isNew,
                     sku, bookingMoney, purchasePoints, warranty, condition, specifications
                 });
@@ -191,7 +229,7 @@ app.put('/api/products/:id', checkPermission(['edit_product_full', 'edit_product
             // Delete variants not in the new list
             const newVariantIds = variants.filter((v) => v.id).map((v) => v.id);
             await prisma.productVariant.deleteMany({
-                where: { 
+                where: {
                     productId: parseInt(req.params.id),
                     id: { notIn: newVariantIds }
                 }
@@ -340,8 +378,8 @@ app.post('/api/categories', checkPermission(['edit_product_full', 'manage_invent
     try {
         const { name, parentId } = req.body;
         const slug = req.body.slug || name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-        const category = await prisma.category.create({ 
-            data: { name, slug, parentId: parentId || null } 
+        const category = await prisma.category.create({
+            data: { name, slug, parentId: parentId || null }
         });
         res.status(201).json(category);
     } catch (err) {
@@ -394,23 +432,23 @@ app.get('/api/brands', async (req, res) => {
 // Create Product (Admin)
 app.post('/api/products', checkPermission(['edit_product_full', 'manage_inventory']), async (req, res) => {
     try {
-        const { 
-            name, description, price, discount, stock, images, categoryId, brandId, 
-            isFeatured, isNew, sku, bookingMoney, purchasePoints, warranty, 
-            specifications, condition, peopleViewing, variants 
+        const {
+            name, description, price, discount, stock, images, categoryId, brandId,
+            isFeatured, isNew, sku, bookingMoney, purchasePoints, warranty,
+            specifications, condition, peopleViewing, variants
         } = req.body;
         const slug = req.body.slug || name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-        
+
         const product = await prisma.product.create({
-            data: { 
-                name, 
-                slug, 
-                description, 
-                price: parseFloat(price) || 0, 
-                discount: parseFloat(discount) || 0, 
-                stock: parseInt(stock) || 0, 
-                images: images || [], 
-                categoryId: parseInt(categoryId), 
+            data: {
+                name,
+                slug,
+                description,
+                price: parseFloat(price) || 0,
+                discount: parseFloat(discount) || 0,
+                stock: parseInt(stock) || 0,
+                images: images || [],
+                categoryId: parseInt(categoryId),
                 brandId: brandId ? parseInt(brandId) : null,
                 isFeatured: isFeatured || false,
                 isNew: isNew || false,
@@ -447,7 +485,7 @@ app.post('/api/upload/image', uploadImage.single('image'), (req, res) => {
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded' });
         }
-        
+
         const imageUrl = `/uploads/${req.file.filename}`;
         res.json({ url: imageUrl });
     } catch (err) {
@@ -464,10 +502,13 @@ app.get('/api/products', async (req, res) => {
         if (isFeatured === 'true') filter.isFeatured = true;
         if (isNew === 'true') filter.isNew = true;
         if (search) {
-            filter.name = {
-                contains: search,
-                mode: 'insensitive'
-            };
+            const searchLower = search.trim();
+            filter.OR = [
+                { name: { contains: searchLower, mode: 'insensitive' } },
+                { slug: { contains: searchLower, mode: 'insensitive' } },
+                { description: { contains: searchLower, mode: 'insensitive' } },
+                { brand: { name: { contains: searchLower, mode: 'insensitive' } } }
+            ];
         }
 
         const products = await prisma.product.findMany({
@@ -478,7 +519,7 @@ app.get('/api/products', async (req, res) => {
                 variants: true,
             },
         });
-        
+
         // Get ratings for all products (with error handling)
         const productsWithRatings = await Promise.all(products.map(async (product) => {
             try {
@@ -493,7 +534,7 @@ app.get('/api/products', async (req, res) => {
                 return { ...product, rating: 0 };
             }
         }));
-        
+
         res.json(productsWithRatings);
     } catch (err) {
         console.error('Failed to fetch products:', err);
@@ -513,7 +554,7 @@ app.get('/api/products/slug/:slug', async (req, res) => {
             },
         });
         if (!product) return res.status(404).json({ error: 'Product not found' });
-        
+
         // Get actual rating from reviews (with error handling)
         let rating = 0;
         try {
@@ -527,7 +568,7 @@ app.get('/api/products/slug/:slug', async (req, res) => {
             // Review table might not exist yet
             rating = 0;
         }
-        
+
         res.json({ ...product, rating });
     } catch (err) {
         res.status(500).json({ error: 'Failed' });
@@ -591,9 +632,9 @@ app.get('/api/products/sample-template', (req, res) => {
         const ws = xlsx.utils.json_to_sheet(sampleData);
         const wb = xlsx.utils.book_new();
         xlsx.utils.book_append_sheet(wb, ws, "Products");
-        
+
         const buffer = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
-        
+
         res.setHeader('Content-Disposition', 'attachment; filename=product_template.xlsx');
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.send(buffer);
@@ -704,7 +745,7 @@ app.put('/api/home-settings', checkPermission(['manage_products', 'edit_shop', '
     try {
         console.log('PUT /api/home-settings body:', req.body);
         const { phone, address, heroSlides } = req.body;
-        
+
         let settings = await prisma.homeSettings.findFirst();
         if (!settings) {
             settings = await prisma.homeSettings.create({
@@ -862,6 +903,21 @@ app.patch('/api/admin/orders/:id', checkPermission(['assign_courier', 'generate_
 
         if (status === 'DELIVERED') {
             console.log(`[SMS] To ${updatedOrder.phone}: Thank you for shopping with Sumash Tech! Your warranty for the products in order #${updatedOrder.id} starts today.`);
+            // Proactive Chat: fire order_delivered event
+            await createProactiveEvent(updatedOrder.userId, 'order_delivered', updatedOrder.id, {
+                orderId: updatedOrder.id,
+                message: 'Your order was delivered today!'
+            });
+        }
+
+        if (status === 'DELAYED') {
+            // Proactive Chat: fire order_delayed event
+            await createProactiveEvent(updatedOrder.userId, 'order_delayed', updatedOrder.id, {
+                orderId: updatedOrder.id,
+                trackingNumber: updatedOrder.trackingNumber,
+                courierName: updatedOrder.courierName,
+                message: 'Your order seems delayed.'
+            });
         }
 
         res.json(updatedOrder);
@@ -985,17 +1041,17 @@ app.get('/api/orders/user/:email', async (req, res) => {
 
         const orders = await prisma.order.findMany({
             where: { userId: user.id },
-            include: { 
-                items: { 
-                    include: { 
+            include: {
+                items: {
+                    include: {
                         product: true,
                         review: true
-                    } 
-                } 
+                    }
+                }
             },
             orderBy: { createdAt: 'desc' }
         });
-        
+
         const ordersWithRating = orders.map(order => ({
             ...order,
             items: order.items.map(item => ({
@@ -1003,7 +1059,7 @@ app.get('/api/orders/user/:email', async (req, res) => {
                 rating: item.review?.rating || null
             }))
         }));
-        
+
         res.json(ordersWithRating);
     } catch (err) {
         console.error('User orders fetch error:', err);
@@ -1068,6 +1124,13 @@ app.post('/api/orders', async (req, res) => {
 
         // 3. Simulated Notification (Step 1)
         console.log(`[step 1] NOTIFICATION: Order #${result.id} placed by user ${result.userId}. Sending confirmation Email/SMS to customer...`);
+
+        // 4. Proactive Chat: fire order_created event
+        await createProactiveEvent(result.userId, 'order_created', result.id, {
+            orderId: result.id,
+            total: result.total,
+            message: 'Your order has been placed successfully!'
+        });
 
         res.json(result);
     } catch (err) {
@@ -1302,7 +1365,7 @@ app.post('/api/products/bulk-upload', checkPermission(['edit_product_full', 'man
                 let categoryId = null;
                 if (row.category) {
                     const category = await prisma.category.findFirst({
-                        where: { 
+                        where: {
                             OR: [
                                 { name: { equals: row.category, mode: 'insensitive' } },
                                 { slug: { equals: row.category.toLowerCase().replace(/\s+/g, '-'), mode: 'insensitive' } }
@@ -1316,7 +1379,7 @@ app.post('/api/products/bulk-upload', checkPermission(['edit_product_full', 'man
                 let brandId = null;
                 if (row.brand) {
                     const brand = await prisma.brand.findFirst({
-                        where: { 
+                        where: {
                             OR: [
                                 { name: { equals: row.brand, mode: 'insensitive' } },
                                 { slug: { equals: row.brand.toLowerCase().replace(/\s+/g, '-'), mode: 'insensitive' } }
@@ -1330,8 +1393,8 @@ app.post('/api/products/bulk-upload', checkPermission(['edit_product_full', 'man
                 let specifications = null;
                 if (row.specifications) {
                     try {
-                        specifications = typeof row.specifications === 'string' 
-                            ? JSON.parse(row.specifications) 
+                        specifications = typeof row.specifications === 'string'
+                            ? JSON.parse(row.specifications)
                             : row.specifications;
                     } catch (e) {
                         specifications = null;
@@ -1366,7 +1429,7 @@ app.post('/api/products/bulk-upload', checkPermission(['edit_product_full', 'man
                     const storageKey = `storage_${i}`;
                     const priceKey = `storage_price_${i}`;
                     const stockKey = `storage_stock_${i}`;
-                    
+
                     if (row[storageKey]) {
                         await prisma.productVariant.create({
                             data: {
@@ -1386,7 +1449,7 @@ app.post('/api/products/bulk-upload', checkPermission(['edit_product_full', 'man
                     const priceKey = `color_price_${i}`;
                     const stockKey = `color_stock_${i}`;
                     const imagesKey = `color_images_${i}`;
-                    
+
                     if (row[colorKey]) {
                         let colorImages = [];
                         if (row[imagesKey]) {
@@ -1410,7 +1473,7 @@ app.post('/api/products/bulk-upload', checkPermission(['edit_product_full', 'man
                     const regionKey = `region_${i}`;
                     const priceKey = `region_price_${i}`;
                     const stockKey = `region_stock_${i}`;
-                    
+
                     if (row[regionKey]) {
                         await prisma.productVariant.create({
                             data: {
@@ -1442,13 +1505,92 @@ app.post('/api/products/bulk-upload', checkPermission(['edit_product_full', 'man
     }
 });
 
+// Helper to send message to Facebook Messenger
+const sendToFacebook = async (psid, text) => {
+    try {
+        await axios.post(`https://graph.facebook.com/v21.0/me/messages?access_token=${process.env.PAGE_ACCESS_TOKEN}`, {
+            recipient: { id: psid },
+            message: { text }
+        });
+        console.log(`[FB Send] Message sent to PSID: ${psid}`);
+    } catch (err) {
+        console.error('[FB Send] Error:', err.response?.data || err.message);
+    }
+};
+
+// Facebook Webhook Handler (Agent -> Website)
+app.post('/api/webhook/facebook', async (req, res) => {
+    const body = req.body;
+
+    if (body.object === 'page') {
+        for (const entry of body.entry) {
+            const webhook_event = entry.messaging[0];
+            const sender_psid = webhook_event.sender.id;
+
+            // Check if it's a message from an agent/page
+            if (webhook_event.message && !webhook_event.message.is_echo) {
+                const text = webhook_event.message.text.trim();
+                console.log(`[FB Webhook] Received message from ${sender_psid}: ${text}`);
+
+                // ADMIN COMMAND: /link <conversationId>
+                if (text.startsWith('/link ')) {
+                    const convIdStr = text.split(' ')[1];
+                    const convId = parseInt(convIdStr);
+                    if (!isNaN(convId)) {
+                        try {
+                            await prisma.chatConversation.update({
+                                where: { id: convId },
+                                data: { fbPsid: sender_psid }
+                            });
+                            await sendToFacebook(sender_psid, `✅ Successfully linked this thread to Website Conversation #${convId}`);
+                            return res.status(200).send('LINKED');
+                        } catch (e) {
+                            await sendToFacebook(sender_psid, `❌ Failed to link: Conversation #${convId} not found.`);
+                        }
+                    }
+                }
+
+                // Find the conversation by PSID
+                const conversation = await prisma.chatConversation.findUnique({
+                    where: { fbPsid: sender_psid }
+                });
+
+                if (conversation) {
+                    // Save the agent message to our database
+                    await prisma.chatMessage.create({
+                        data: {
+                            conversationId: conversation.id,
+                            sender: 'admin',
+                            senderName: 'FB Agent',
+                            content: text
+                        }
+                    });
+
+                    // Update last message
+                    await prisma.chatConversation.update({
+                        where: { id: conversation.id },
+                        data: {
+                            lastMessage: text.substring(0, 100),
+                            lastMessageAt: new Date(),
+                            unreadCustomer: { increment: 1 }
+                        }
+                    });
+                }
+            }
+        }
+        res.status(200).send('EVENT_RECEIVED');
+    } else {
+        res.sendStatus(404);
+    }
+});
+
 // Chat API Routes
 
 // Customer: Get or create conversation
 app.post('/api/chat/conversation', async (req, res) => {
     try {
         const { customerId, customerName, customerEmail } = req.body;
-        
+
         if (!customerId) {
             return res.status(400).json({ error: 'Customer ID required' });
         }
@@ -1511,6 +1653,11 @@ app.post('/api/chat/message', async (req, res) => {
             }
         });
 
+        // Forward to Facebook if PSID exists
+        if (conversation.fbPsid) {
+            await sendToFacebook(conversation.fbPsid, content);
+        }
+
         res.json({ conversation, message });
     } catch (err) {
         console.error('Chat message error:', err);
@@ -1522,7 +1669,7 @@ app.post('/api/chat/message', async (req, res) => {
 app.get('/api/chat/conversation/:conversationId/messages', async (req, res) => {
     try {
         const { conversationId } = req.params;
-        
+
         const messages = await prisma.chatMessage.findMany({
             where: { conversationId: parseInt(conversationId) },
             orderBy: { createdAt: 'asc' }
@@ -1539,7 +1686,7 @@ app.get('/api/chat/conversation/:conversationId/messages', async (req, res) => {
 app.get('/api/chat/customer/:customerId', async (req, res) => {
     try {
         const { customerId } = req.params;
-        
+
         const conversations = await prisma.chatConversation.findMany({
             where: { customerId: parseInt(customerId) },
             orderBy: { lastMessageAt: 'desc' }
@@ -1556,7 +1703,7 @@ app.get('/api/chat/customer/:customerId', async (req, res) => {
 app.put('/api/chat/conversation/:conversationId/read', async (req, res) => {
     try {
         const { conversationId } = req.params;
-        
+
         await prisma.chatMessage.updateMany({
             where: { conversationId: parseInt(conversationId), sender: 'admin', isRead: false },
             data: { isRead: true }
@@ -1592,7 +1739,7 @@ app.get('/api/admin/chat/conversations', checkPermission(['manage_chat', 'view_o
 app.get('/api/admin/chat/conversation/:conversationId/messages', checkPermission(['manage_chat', 'view_orders_all']), async (req, res) => {
     try {
         const { conversationId } = req.params;
-        
+
         const messages = await prisma.chatMessage.findMany({
             where: { conversationId: parseInt(conversationId) },
             orderBy: { createdAt: 'asc' }
@@ -1657,6 +1804,95 @@ app.get('/api/admin/chat/unread', checkPermission(['manage_chat', 'view_orders_a
     } catch (err) {
         console.error('Admin chat unread error:', err);
         res.status(500).json({ error: 'Failed to get unread count' });
+    }
+});
+
+// ─────────────────────────────────────────────────────────────────
+// PROACTIVE SUPPORT EVENT ENDPOINTS
+// ─────────────────────────────────────────────────────────────────
+
+// POST /api/events/trigger – manually fire any event (admin/internal)
+app.post('/api/events/trigger', async (req, res) => {
+    try {
+        const { userId, eventType, orderId, payload } = req.body;
+        if (!userId || !eventType) return res.status(400).json({ error: 'userId and eventType required' });
+        await createProactiveEvent(userId, eventType, orderId || null, payload || {});
+        res.json({ success: true, message: `Event '${eventType}' triggered for user ${userId}` });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to trigger event', details: err.message });
+    }
+});
+
+// GET /api/events/pending/:userId – frontend polls for pending events
+app.get('/api/events/pending/:userId', async (req, res) => {
+    try {
+        const userId = parseInt(req.params.userId);
+        if (isNaN(userId)) return res.status(400).json({ error: 'Invalid user ID' });
+        const events = await prisma.proactiveChatEvent.findMany({
+            where: { userId, status: 'pending' },
+            orderBy: { createdAt: 'asc' }
+        });
+        res.json(events);
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch events', details: err.message });
+    }
+});
+
+// PATCH /api/events/:id/dismiss – mark event as dismissed
+app.patch('/api/events/:id/dismiss', async (req, res) => {
+    try {
+        const id = parseInt(req.params.id);
+        if (isNaN(id)) return res.status(400).json({ error: 'Invalid event ID' });
+        const event = await prisma.proactiveChatEvent.update({
+            where: { id },
+            data: { status: req.body.status || 'dismissed' }
+        });
+        res.json({ success: true, event });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to dismiss event', details: err.message });
+    }
+});
+
+// POST /api/events/cart-abandon – called by frontend when user leaves cart with items
+app.post('/api/events/cart-abandon', async (req, res) => {
+    try {
+        const { userId, cartItems, cartTotal } = req.body;
+        if (!userId) return res.status(400).json({ error: 'userId required' });
+
+        // Avoid duplicate cart-abandoned events within the last 30 minutes
+        const recentEvent = await prisma.proactiveChatEvent.findFirst({
+            where: {
+                userId: parseInt(userId),
+                eventType: 'cart_abandoned',
+                status: 'pending',
+                createdAt: { gte: new Date(Date.now() - 30 * 60 * 1000) }
+            }
+        });
+
+        if (recentEvent) return res.json({ success: true, skipped: true });
+
+        await createProactiveEvent(parseInt(userId), 'cart_abandoned', null, {
+            cartItems: cartItems || [],
+            cartTotal: cartTotal || 0,
+            message: 'You left some items in your cart!'
+        });
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to create cart-abandon event', details: err.message });
+    }
+});
+
+// POST /api/events/simulate-payment-fail – demo / testing
+app.post('/api/events/simulate-payment-fail', async (req, res) => {
+    try {
+        const { userId, orderId } = req.body;
+        if (!userId) return res.status(400).json({ error: 'userId required' });
+        await createProactiveEvent(parseInt(userId), 'payment_failed', orderId || null, {
+            message: `Your payment didn't go through. Please retry.`
+        });
+        res.json({ success: true, message: 'Payment-fail event simulated' });
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to simulate event', details: err.message });
     }
 });
 

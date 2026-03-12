@@ -1,13 +1,38 @@
 'use client';
 
 import { useCart } from '@/context/CartContext';
+import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:54321';
 
 export default function CartPage() {
     const { cart, removeFromCart, updateQuantity, cartTotal } = useCart();
+    const { user } = useAuth();
     const router = useRouter();
+
+    // Fire cart-abandon event when customer leaves with items still in cart
+    useEffect(() => {
+        const handleLeave = () => {
+            if (!user || cart.length === 0) return;
+            const payload = JSON.stringify({
+                userId: user.id,
+                cartItems: cart.map(i => ({ name: i.name, quantity: i.quantity })),
+                cartTotal,
+            });
+            // sendBeacon is fire-and-forget, works even as page is unloading
+            navigator.sendBeacon(
+                `${API_URL}/api/events/cart-abandon`,
+                new Blob([payload], { type: 'application/json' })
+            );
+        };
+
+        window.addEventListener('pagehide', handleLeave);
+        return () => window.removeEventListener('pagehide', handleLeave);
+    }, [user, cart, cartTotal]);
 
     if (cart.length === 0) {
         return (

@@ -16,6 +16,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import PopupOffer from "@/components/PopupOffer";
 import ChatWidget from "@/components/ChatWidget";
+import ProactiveChatBubble from "@/components/ProactiveChatBubble";
 import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
 import RouteGuard from "@/components/RouteGuard";
@@ -42,6 +43,7 @@ export default function RootLayout({
             </RouteGuard>
             <Footer />
             <ChatWidget />
+            <ProactiveChatBubble />
           </CartProvider>
         </AuthProvider>
       </body>

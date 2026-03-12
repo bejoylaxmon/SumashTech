@@ -23,7 +23,7 @@ interface ProductProps {
 export default function ProductCard({ product }: ProductProps) {
   const { addToCart } = useCart();
   const discount = product.discount || 0;
-  const discountPrice = discount > 0 
+  const discountPrice = discount > 0
     ? product.price - (product.price * discount / 100)
     : null;
 
@@ -43,9 +43,9 @@ export default function ProductCard({ product }: ProductProps) {
   };
 
   return (
-    <Link href={`/product/${product.slug}`} className="group bg-white rounded-3xl p-4 shadow-sm hover:shadow-xl transition-all border border-gray-100 flex flex-col h-full relative overflow-hidden">
+    <Link href={`/product/${product.slug}`} className="group bg-white rounded-2xl md:rounded-3xl p-3 md:p-4 shadow-sm hover:shadow-xl transition-all border border-gray-100 flex flex-col h-full relative overflow-hidden">
       {/* Badges */}
-      <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
+      <div className="absolute top-2 md:top-4 left-2 md:left-4 z-10 flex flex-col gap-1 md:gap-2">
         {isOutOfStock && (
           <span className="bg-gray-800 text-black text-[10px] font-bold px-2 py-1 rounded-full uppercase shadow-sm">Stock Out</span>
         )}
@@ -96,11 +96,11 @@ export default function ProductCard({ product }: ProductProps) {
           <div className="flex flex-col">
             {discountPrice ? (
               <>
-                <span className="text-primary font-black text-lg">৳{discountPrice.toLocaleString()}</span>
-                <span className="text-gray-400 text-xs line-through">৳{product.price.toLocaleString()}</span>
+                <span className="text-primary font-black text-sm md:text-lg">৳{discountPrice.toLocaleString()}</span>
+                <span className="text-gray-400 text-[10px] md:text-xs line-through">৳{product.price.toLocaleString()}</span>
               </>
             ) : (
-              <span className="text-primary font-black text-lg">৳{product.price.toLocaleString()}</span>
+              <span className="text-primary font-black text-sm md:text-lg">৳{product.price.toLocaleString()}</span>
             )}
           </div>
 
