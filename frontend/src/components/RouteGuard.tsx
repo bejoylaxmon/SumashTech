@@ -2,37 +2,55 @@
 
 import { useAuth } from '@/context/AuthContext';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
+
+const ADMIN_ROLES = ['SUPER_ADMIN', 'MANAGER', 'ADMIN', 'SALES', 'EDITOR'];
 
 export default function RouteGuard({ children }: { children: React.ReactNode }) {
-    const { user, loading } = useAuth();
+    const { user, loading: authLoading } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
+    const redirected = useRef(false);
+    const [isClient, setIsClient] = useState(false);
 
     useEffect(() => {
-        if (!loading) {
-            const isAdminRoute = pathname.startsWith('/admin');
-            const isAuthRoute = pathname === '/login' || pathname === '/signup';
+        setIsClient(true);
+    }, []);
 
-            if (isAdminRoute) {
-                if (!user) {
-                    router.push('/login');
-                } else if (user.role !== 'SUPER_ADMIN' && user.role !== 'MANAGER') {
-                    router.push('/');
-                }
+    useEffect(() => {
+        if (!isClient || authLoading || redirected.current) return;
+
+        const isAdminRoute = pathname.startsWith('/admin');
+        
+        if (isAdminRoute) {
+            if (!user) {
+                redirected.current = true;
+                router.replace('/login');
+            } else if (!ADMIN_ROLES.includes(user.role)) {
+                redirected.current = true;
+                router.replace('/');
             }
         }
-    }, [user, loading, pathname, router]);
+    }, [user, authLoading, pathname, router, isClient]);
 
-    if (loading) {
+    const isAdminRoute = pathname.startsWith('/admin');
+    
+    if (!isClient) {
+        return null;
+    }
+
+    if (authLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-white">
                 <div className="flex flex-col items-center gap-4">
-                    <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                    <span className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400">Authenticating...</span>
+                    <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
                 </div>
             </div>
         );
+    }
+
+    if (isAdminRoute && (!user || !ADMIN_ROLES.includes(user.role))) {
+        return null;
     }
 
     return <>{children}</>;

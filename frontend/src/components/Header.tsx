@@ -42,12 +42,20 @@ export default function Header() {
             }
         };
         fetchChatUnread();
-        const interval = setInterval(fetchChatUnread, 10000);
+        const interval = setInterval(fetchChatUnread, 30000);
         return () => clearInterval(interval);
     }, [user]);
 
     useEffect(() => {
         const fetchSettings = async () => {
+            const cached = localStorage.getItem('headerSettings');
+            if (cached) {
+                const data = JSON.parse(cached);
+                if (data.phone) setCompanyPhone(data.phone);
+                if (data.address) setCompanyAddress(data.address);
+                if (data.headerLogo) setHeaderLogo(data.headerLogo);
+            }
+            
             try {
                 const res = await fetch(`${API_BASE}/api/home-settings`);
                 if (!res.ok) return;
@@ -55,6 +63,7 @@ export default function Header() {
                 if (data.phone) setCompanyPhone(data.phone);
                 if (data.address) setCompanyAddress(data.address);
                 if (data.headerLogo) setHeaderLogo(data.headerLogo);
+                localStorage.setItem('headerSettings', JSON.stringify(data));
             } catch (err) {
                 console.error('Failed to fetch header settings:', err);
             }
@@ -62,11 +71,18 @@ export default function Header() {
         fetchSettings();
 
         const fetchCategories = async () => {
+            const cached = localStorage.getItem('categories');
+            if (cached) {
+                setCategories(JSON.parse(cached));
+                return;
+            }
+            
             try {
                 const res = await fetch(`${API_BASE}/api/categories`);
                 if (!res.ok) return;
                 const data = await res.json();
                 setCategories(data);
+                localStorage.setItem('categories', JSON.stringify(data));
             } catch (err) {
                 console.error('Failed to fetch categories:', err);
             }

@@ -10,6 +10,13 @@ export default function Footer() {
   const [address, setAddress] = useState('Dhaka, Bangladesh');
 
   useEffect(() => {
+    const cached = localStorage.getItem('footerSettings');
+    if (cached) {
+      const data = JSON.parse(cached);
+      if (data.phone) setPhone(data.phone);
+      if (data.address) setAddress(data.address);
+    }
+
     const fetchSettings = async () => {
       try {
         const res = await fetch(`${API_BASE}/api/home-settings`);
@@ -17,6 +24,7 @@ export default function Footer() {
         const data = await res.json();
         if (data.phone) setPhone(data.phone);
         if (data.address) setAddress(data.address);
+        localStorage.setItem('footerSettings', JSON.stringify(data));
       } catch (err) {
         console.error('Failed to fetch footer settings:', err);
       }
