@@ -126,14 +126,29 @@ model Order {
   userId        Int
   user          User        @relation(fields: [userId], references: [id])
   total         Float
-  status        String      @default("PENDING") // PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED
-  paymentMethod String      @default("COD") // COD, BKASH
+  status        String      @default("PENDING") // PENDING, VERIFIED, PROCESSING, SHIPPED, DELIVERED, REFUND_REQUESTED, CANCELLED, REFUNDED
+  shippingStatus String     @default("Pending") // Pending, Packed, Handed to Courier, In Transit, Delivered
+  paymentMethod String      @default("COD") // COD, BKASH, CARD, MOBILE_BANKING
   address       String?
   phone         String?
   courierName    String?
   trackingNumber String?
   invoiceUrl     String?
   
+  // Delivery tracking
+  deliveredAt    DateTime?
+  
+  // Refund fields
+  refundStatus          String?    // PENDING, APPROVED, REJECTED
+  refundReason          String?    // Mandatory reason
+  refundDescription     String?    // Optional comments
+  refundEvidencePhotos  String?    // JSON array of photo URLs
+  refundAmount          Float?     // Amount to refund
+  refundMethod          String?    // Original Payment, Bank Transfer, Store Credit
+  refundRequestDate     DateTime?  // When refund was requested
+  refundProcessedDate   DateTime?  // When admin processed it
+  refundRejectionReason String?    // Reason if rejected
+
   verifiedById   Int?
   shippedById    Int?
   refundedById   Int?

@@ -866,33 +866,46 @@ app.patch('/api/admin/orders/:id', checkPermission(['assign_courier', 'generate_
         const isSales = perms.includes('verify_order_status');
 
         const allowedData = {};
-        const { status, courierName, trackingNumber, invoiceUrl } = req.body;
+        const { status, courierName, trackingNumber, invoiceUrl, shippingStatus } = req.body;
 
         if (isAdmin) {
-            Object.assign(allowedData, { status, courierName, trackingNumber, invoiceUrl });
+            Object.assign(allowedData, { status, courierName, trackingNumber, invoiceUrl, shippingStatus });
         } else {
             if (isSales) {
                 if (status === 'VERIFIED') {
                     allowedData.status = 'VERIFIED';
                     allowedData.verifiedById = user.id;
+                    allowedData.shippingStatus = 'Packed';
                 }
                 if (status === 'DELIVERED') {
                     allowedData.status = 'DELIVERED';
+                    allowedData.deliveredAt = new Date();
                 }
             }
             if (isManager) {
                 if (status) {
                     allowedData.status = status;
-                    if (status === 'SHIPPED') allowedData.shippedById = user.id;
-                    if (status === 'DELIVERED') allowedData.status = 'DELIVERED';
+                    if (status === 'SHIPPED') {
+                        allowedData.shippedById = user.id;
+                        allowedData.shippingStatus = 'In Transit';
+                    }
+                    if (status === 'DELIVERED') {
+                        allowedData.status = 'DELIVERED';
+                        allowedData.shippingStatus = 'Delivered';
+                        allowedData.deliveredAt = new Date();
+                    }
                 }
                 if (courierName) allowedData.courierName = courierName;
                 if (trackingNumber) allowedData.trackingNumber = trackingNumber;
                 if (invoiceUrl) allowedData.invoiceUrl = invoiceUrl;
+                if (shippingStatus) allowedData.shippingStatus = shippingStatus;
             }
         }
 
         if (isAdmin && status === 'CANCELLED') {
+            allowedData.refundedById = user.id;
+        }
+        if (isAdmin && status === 'REFUNDED') {
             allowedData.refundedById = user.id;
         }
 
@@ -924,6 +937,97 @@ app.patch('/api/admin/orders/:id', checkPermission(['assign_courier', 'generate_
     } catch (err) {
         console.error('Order status update error:', err);
         res.status(500).json({ error: 'Failed to update order' });
+    }
+});
+
+// Admin: Process Refund
+app.patch('/api/admin/orders/:id/refund', checkPermission('delete_refund_order'), async (req, res) => {
+    try {
+        const email = req.headers['x-user-email'];
+        const adminUser = await prisma.user.findUnique({
+            where: { email },
+            include: { role: { include: { permissions: true } } }
+        });
+
+        const perms = adminUser.role.permissions.map(p => p.name);
+        if (!perms.includes('delete_refund_order')) {
+            return res.status(403).json({ error: 'Permission denied' });
+        }
+
+        const orderId = parseInt(req.params.id);
+        const { action, refundAmount, refundMethod, rejectionReason } = req.body;
+
+        const order = await prisma.order.findUnique({
+            where: { id: orderId },
+            include: { user: true }
+        });
+
+        if (!order) return res.status(404).json({ error: 'Order not found' });
+        if (order.status !== 'REFUND_REQUESTED' || order.refundStatus !== 'PENDING') {
+            return res.status(400).json({ error: 'No pending refund request found' });
+        }
+
+        let updatedOrder;
+
+        if (action === 'approve') {
+            if (!refundAmount || !refundMethod) {
+                return res.status(400).json({ error: 'Refund amount and method are required' });
+            }
+
+            updatedOrder = await prisma.order.update({
+                where: { id: orderId },
+                data: {
+                    status: 'REFUNDED',
+                    refundStatus: 'APPROVED',
+                    refundAmount: parseFloat(refundAmount),
+                    refundMethod: refundMethod,
+                    refundProcessedDate: new Date(),
+                    refundedById: adminUser.id
+                }
+            });
+
+            // Proactive Chat: fire refund_approved event
+            await createProactiveEvent(order.userId, 'refund_approved', orderId, {
+                orderId: orderId,
+                amount: refundAmount,
+                method: refundMethod,
+                message: `Your refund request for order #${orderId} has been approved. Amount: ৳${refundAmount} via ${refundMethod}`
+            });
+
+            console.log(`[SMS] To ${order.phone}: Your refund request for order #${orderId} has been approved. Amount: ৳${refundAmount} will be processed via ${refundMethod}.`);
+
+        } else if (action === 'reject') {
+            if (!rejectionReason) {
+                return res.status(400).json({ error: 'Rejection reason is required' });
+            }
+
+            updatedOrder = await prisma.order.update({
+                where: { id: orderId },
+                data: {
+                    status: 'DELIVERED',
+                    refundStatus: 'REJECTED',
+                    refundRejectionReason: rejectionReason,
+                    refundProcessedDate: new Date()
+                }
+            });
+
+            // Proactive Chat: fire refund_rejected event
+            await createProactiveEvent(order.userId, 'refund_rejected', orderId, {
+                orderId: orderId,
+                reason: rejectionReason,
+                message: `Your refund request for order #${orderId} has been rejected. Reason: ${rejectionReason}`
+            });
+
+            console.log(`[SMS] To ${order.phone}: Your refund request for order #${orderId} has been rejected. Reason: ${rejectionReason}`);
+
+        } else {
+            return res.status(400).json({ error: 'Invalid action. Use "approve" or "reject"' });
+        }
+
+        res.json(updatedOrder);
+    } catch (err) {
+        console.error('Refund processing error:', err);
+        res.status(500).json({ error: 'Failed to process refund' });
     }
 });
 
@@ -1140,6 +1244,119 @@ app.post('/api/orders', async (req, res) => {
             details: err.message,
             code: err.code // Prisma error codes
         });
+    }
+});
+
+// Upload refund evidence photo
+app.post('/api/orders/refund/upload', async (req, res) => {
+    try {
+        const email = req.headers['x-user-email'];
+        if (!email) return res.status(401).json({ error: 'Unauthorized' });
+
+        const user = await prisma.user.findUnique({ where: { email } });
+        if (!user) return res.status(404).json({ error: 'User not found' });
+
+        // Check if there's a file in the request
+        const photoUrl = req.body.photoUrl;
+        
+        if (!photoUrl) {
+            return res.status(400).json({ error: 'Photo URL is required' });
+        }
+
+        res.json({ url: photoUrl });
+    } catch (err) {
+        console.error('Upload error:', err);
+        res.status(500).json({ error: 'Failed to upload photo' });
+    }
+});
+
+// Submit refund request
+app.post('/api/orders/:id/refund', async (req, res) => {
+    try {
+        console.log('[Refund] Starting refund request for order:', req.params.id);
+        
+        const email = req.headers['x-user-email'];
+        if (!email) return res.status(401).json({ error: 'Unauthorized' });
+
+        const user = await prisma.user.findUnique({ where: { email } });
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        
+        console.log('[Refund] User found:', user.email);
+
+        const orderId = parseInt(req.params.id);
+        if (isNaN(orderId)) return res.status(400).json({ error: 'Invalid order ID' });
+
+        const { reason, description, photoUrls } = req.body;
+        console.log('[Refund] Request data:', { reason, description, photoUrls: photoUrls?.length });
+
+        if (!reason) {
+            return res.status(400).json({ error: 'Refund reason is required' });
+        }
+
+        const order = await prisma.order.findUnique({
+            where: { id: orderId },
+            include: { user: true }
+        });
+        
+        console.log('[Refund] Order found:', order?.id, 'Status:', order?.status);
+
+        if (!order) return res.status(404).json({ error: 'Order not found' });
+        if (order.userId !== user.id) {
+            return res.status(403).json({ error: 'Not authorized' });
+        }
+        if (order.status !== 'DELIVERED') {
+            return res.status(400).json({ error: `Only delivered orders can be refunded. Current status: ${order.status}` });
+        }
+
+        // Check refund window (7 days from delivery)
+        // For backwards compatibility: if deliveredAt is not set, allow refund
+        if (order.deliveredAt) {
+            const daysSinceDelivery = Math.floor((new Date() - new Date(order.deliveredAt)) / (1000 * 60 * 60 * 24));
+            if (daysSinceDelivery > 7) {
+                return res.status(400).json({ error: 'Refund window has expired (7 days from delivery)' });
+            }
+        }
+
+        // Check if already has a pending refund request
+        if (order.refundStatus === 'PENDING') {
+            return res.status(400).json({ error: 'Refund request already pending' });
+        }
+        if (order.status === 'REFUNDED') {
+            return res.status(400).json({ error: 'Order already refunded' });
+        }
+
+        console.log('[Refund] Updating order with refund request...');
+        
+        // Update order with refund request
+        const updatedOrder = await prisma.order.update({
+            where: { id: orderId },
+            data: {
+                status: 'REFUND_REQUESTED',
+                refundStatus: 'PENDING',
+                refundReason: reason,
+                refundDescription: description || null,
+                refundEvidencePhotos: photoUrls ? JSON.stringify(photoUrls) : null,
+                refundRequestDate: new Date()
+            }
+        });
+        
+        console.log('[Refund] Order updated successfully:', updatedOrder.id);
+
+        // Proactive Chat: fire refund_requested event
+        try {
+            await createProactiveEvent(user.id, 'refund_requested', orderId, {
+                orderId: orderId,
+                reason: reason,
+                message: 'Your refund request has been submitted and is awaiting admin approval.'
+            });
+        } catch (chatErr) {
+            console.error('[Refund] Proactive event error (non-fatal):', chatErr.message);
+        }
+
+        res.json(updatedOrder);
+    } catch (err) {
+        console.error('[Refund] FATAL ERROR:', err);
+        res.status(500).json({ error: 'Failed to submit refund request', details: err.message });
     }
 });
 
